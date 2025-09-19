@@ -1,0 +1,34 @@
+<clickhouse>
+    <storage_configuration>
+        <disks>
+            <hot>
+                <type>local</type>
+                <path>/var/lib/clickhouse/store/</path>
+            </hot>
+
+            <s3_cold>
+                <type>s3</type>
+                <endpoint>http://minio:9000</endpoint>
+                <access_key_id>minio</access_key_id>
+                <secret_access_key>minio12345</secret_access_key>
+                <region>us-east-1</region>
+                <bucket>ch-cold</bucket>
+                <metadata_path>/var/lib/clickhouse/disks/s3_cold/</metadata_path>
+            </s3_cold>
+        </disks>
+
+        <policies>
+            <hot_to_cold>
+                <volumes>
+                    <hot>
+                        <disk>hot</disk>
+                    </hot>
+                    <cold>
+                        <disk>s3_cold</disk>
+                    </cold>
+                </volumes>
+                <move_factor>0</move_factor>
+            </hot_to_cold>
+        </policies>
+    </storage_configuration>
+</clickhouse>

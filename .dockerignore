@@ -1,0 +1,7 @@
+.git
+.github
+.tmp
+/build
+/node_modules
+**/*.local.*
+**/*.log

@@ -1,0 +1,50 @@
+# config_dev.yaml — swap-stats (dev-like)
+ingest:
+  broker_type: redpanda           # redpanda | kafka
+  brokers: ["localhost:9092"]
+  topic: "raw-swaps"
+  group_id: "swap-stats"
+  start: "latest"                 # или "earliest"
+  max_bytes: 1048576
+  topic_cfg:
+    partitions: 12
+    replication: 1                # dev
+    retention_ms: 604800000       # 7d
+    cleanup_policy: delete
+    segment_ms: 3600000           # 1h
+
+app:
+  grace: "120s"
+  snapshot_interval: "5s"
+  dedupe_ttl: "24h"
+
+stores:
+  redis:
+    addr: "localhost:6379"
+    db: 2
+    prefix: "swapstats:"
+  clickhouse:
+    dsn: "tcp://localhost:9000?database=swaps&compress=true"
+
+pubsub:
+  nats:
+    url: "nats://localhost:4222"
+
+security:
+  jwt:
+    enabled: true
+    alg: RS256
+    public_key_path:  "./secrets/jwtRS256.key.pub"
+    private_key_path: "./secrets/jwtRS256.key"
+
+rate_limit:
+  by_jwt: { refill_per_sec: 50, burst: 200 }
+  by_ip:  { refill_per_sec: 20, burst: 60 }
+
+api:
+  http: { addr: ":8080" }
+  ws:   { coalesce_ms: 100, max_conn: 5000 }
+
+metrics:
+  prometheus: ":9091"
+  pprof: ":6060"
