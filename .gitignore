@@ -1,2 +1,3 @@
 .idea
-
+infra/secrets/jwtRS256.key
+infra/secrets/jwtRS256.key.pub
