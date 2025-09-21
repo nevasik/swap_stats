@@ -1,33 +1,47 @@
 <clickhouse>
     <storage_configuration>
         <disks>
-            <hot>
-                <type>local</type>
-                <path>/var/lib/clickhouse/store/</path>
-            </hot>
-
-            <s3_cold>
+            <cold>
                 <type>s3</type>
-                <endpoint>http://minio:9000</endpoint>
+                <endpoint>http://minio:9000/ch-cold/</endpoint>
                 <access_key_id>minio</access_key_id>
                 <secret_access_key>minio12345</secret_access_key>
-                <region>us-east-1</region>
-                <bucket>ch-cold</bucket>
-                <metadata_path>/var/lib/clickhouse/disks/s3_cold/</metadata_path>
-            </s3_cold>
+                <region/>
+                <!-- где хранить локальные метаданные этого диска -->
+                <metadata_path>/var/lib/clickhouse/disks/s3/cold/</metadata_path>
+
+                <!-- терпимее таймауты/соединения для dev -->
+                <connect_timeout_ms>5000</connect_timeout_ms>
+                <request_timeout_ms>30000</request_timeout_ms>
+                <max_connections>16</max_connections>
+
+                <!-- размер чанков при multipart upload -->
+                <min_upload_part_size>8MiB</min_upload_part_size>
+                <max_single_part_upload_size>64MiB</max_single_part_upload_size>
+                <upload_part_size_multiply_factor>2</upload_part_size_multiply_factor>
+                <upload_part_size_multiply_parts_count_threshold>500</upload_part_size_multiply_parts_count_threshold>
+            </cold>
+
+            <s3_cache>
+                <type>cache</type>
+                <disk>cold</disk>
+                <path>/var/lib/clickhouse/disks/s3_cache/</path>
+                <max_size>10Gi</max_size>
+            </s3_cache>
         </disks>
 
+        <!-- политика: hot (default) + cold (S3)-->
         <policies>
             <hot_to_cold>
                 <volumes>
                     <hot>
-                        <disk>hot</disk>
+                        <disk>default</disk>
                     </hot>
                     <cold>
-                        <disk>s3_cold</disk>
+                        <disk>cold</disk>
                     </cold>
                 </volumes>
-                <move_factor>0</move_factor>
+                <move_factor>0.1</move_factor>
             </hot_to_cold>
         </policies>
     </storage_configuration>

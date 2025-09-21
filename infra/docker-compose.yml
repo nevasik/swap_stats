@@ -1,7 +1,7 @@
 services:
   # -------- S3 (MinIO) --------
   minio:
-    image: minio/minio:RELEASE.2024-08-29T22-40-21Z
+    image: minio/minio
     container_name: minio
     command: server /data --console-address ":9001"
     environment:
@@ -19,7 +19,7 @@ services:
       retries: 20
 
   minio-setup:
-    image: minio/mc:RELEASE.2024-08-28T16-40-22Z
+    image: minio/mc
     depends_on:
       minio:
         condition: service_healthy
@@ -41,16 +41,17 @@ services:
       - CLICKHOUSE_PASSWORD=GpW56Q4nbbXf0Oi
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
     ports:
-      - "9000:9000"
+      - "9002:9000"
       - "8123:8123"
     volumes:
       - ch-data:/var/lib/clickhouse
       - ./clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml:ro
+      - ./clickhouse/log-console.xml:/etc/clickhouse-server/config.d/log-console.xml:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8123/ping | grep -q 'Ok'"]
       interval: 10s
       timeout: 3s
-      retries: 30
+      retries: 60
     depends_on:
       minio-setup:
         condition: service_completed_successfully
@@ -66,7 +67,7 @@ services:
     entrypoint: >
       /bin/bash -c "
       echo 'Applying ClickHouse schema...' &&
-      clickhouse-client --host clickhouse --port 9000 --queries-file /docker-entrypoint-initdb.d/schema.sql &&
+      clickhouse-client --host clickhouse --port 9000 --user nevasik --password GpW56Q4nbbXf0Oi --queries-file /docker-entrypoint-initdb.d/schema.sql &&
       echo 'ClickHouse schema applied';
       "
     restart: "no"
@@ -95,6 +96,16 @@ services:
       interval: 10s
       timeout: 4s
       retries: 30
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: redpanda-console
+    depends_on:
+      - redpanda
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+    ports:
+      - "8081:8080"
 
   rp-init:
     image: redpandadata/redpanda:v24.1.7
@@ -146,6 +157,7 @@ services:
       retries: 20
 
   nats-box:
+    platform: linux/amd64
     image: synadia/nats-box
     container_name: nats-box
     depends_on: [ nats ]

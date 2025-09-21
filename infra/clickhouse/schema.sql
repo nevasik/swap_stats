@@ -5,9 +5,9 @@ USE swaps;
 -- В проде поменять горизонт на 30/90 дней
 CREATE TABLE IF NOT EXISTS raw_swaps
 (
-    event_date      Date        DEFAULT toDate(event_time),
-    event_time      DateTime64(3, 'UTC'),
-    ingested_time   DateTime64(3, 'UTC') DEFAULT now(),
+    event_date      Date DEFAULT toDate(event_time),
+    event_time      DateTime('UTC'),
+    ingested_time   DateTime('UTC') DEFAULT now(),
     chain_id        UInt32,
     tx_hash         FixedString(66),
     log_index       UInt32,
