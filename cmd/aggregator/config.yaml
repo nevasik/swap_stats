@@ -10,6 +10,11 @@ logging:
   level: "info"               # debug|info|warn|error
   format: "json"              # json|console
 
+alerting:
+  app_name: "swap-system"
+  token: "7359465015:AAH6-f61xPkIil_uzydXtFVbVvzxcu_zudo"
+  chat_id: "-1002612359048"
+
 security:
   jwt:
     enabled: true # включить проверку токенов на HTTP/WS
