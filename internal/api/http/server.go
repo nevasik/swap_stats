@@ -2,17 +2,15 @@ package http
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
-	"net"
+	"dexcelerate/internal/stores/clickhouse"
 	"net/http"
 
 	"dexcelerate/internal/config"
 	"dexcelerate/internal/security"
 	rds "dexcelerate/internal/stores/redis"
-	"github.com/go-chi/chi/v5"
+
+	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/nats-io/nats.go"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gitlab.com/nevasik7/alerting/logger"
 )
 
@@ -22,7 +20,7 @@ type Server struct {
 	srv   *http.Server
 	jwt   *security.Verifier
 	redis *rds.Client
-	ch    *sql.DB
+	ch    *ch.Conn
 	nc    *nats.Conn
 	js    nats.JetStreamContext
 }
@@ -32,7 +30,7 @@ func NewServer(
 	cfg *config.Config,
 	jwt *security.Verifier,
 	redis *rds.Client,
-	ch *sql.DB,
+	ch *clickhouse.Conn,
 	nc *nats.Conn,
 	js nats.JetStreamContext,
 ) *Server {
@@ -45,4 +43,14 @@ func NewServer(
 		nc:    nc,
 		js:    js,
 	}
+}
+
+func (s Server) Start() error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s Server) Shutdown(ctx context.Context) error {
+	//TODO implement me
+	panic("implement me")
 }

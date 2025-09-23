@@ -18,9 +18,10 @@ import (
 type Container struct {
 	app *App
 
-	redis *redisstore.Client
-	ch    *chstore.Conn
-	nc    natspub.NatsConn
+	redis    *redisstore.Client
+	ch       *chstore.Conn
+	chWriter *chstore.Writer
+	nc       natspub.NatsConn
 }
 
 type NatsConn interface {
@@ -41,7 +42,6 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 	}, log)
 	log.Info("Telegram alert initialized success")
 
-	// general alert manager
 	alert := alerting.NewAlerting(log, tgAlert)
 
 	redisCli, err := redisstore.New(ctx, cfg.Stores.Redis)
@@ -56,11 +56,14 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		_ = redisCli.Close()
 		return nil, func() {}, err
 	}
+	defer chConn.Close()
 
-	writer := chstore.NewWriter(alert, chConn.Native, cfg.Stores.ClickHouse.Writer)
+	chWriter := chstore.NewWriter(alert, chConn.Native, cfg.Stores.ClickHouse.Writer)
+	defer chWriter.Close(ctx)
 
 	nc, js, err := natspub.New(ctx, cfg.PubSub.Nats)
 	if err != nil {
+		_ = chWriter.Close(ctx)
 		_ = chConn.Close()
 		_ = redisCli.Close()
 		return nil, func() {}, err
@@ -74,19 +77,20 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		return nil, func() {}, err
 	}
 
-	httpSrv := apihttp.NewServer(log, cfg, jwtVerifier, redisCli, chConn.DB, nc, js)
+	httpSrv := apihttp.NewServer(log, cfg, jwtVerifier, redisCli, chConn, nc, js)
 
-	a := New(log, httpSrv)
+	a := New(alert, httpSrv)
 
 	c := &Container{
-		app:   a,
-		redis: redisCli,
-		ch:    chConn,
-		nc:    nc,
+		app:      a,
+		redis:    redisCli,
+		ch:       chConn,
+		chWriter: chWriter,
+		nc:       nc,
 	}
 
 	cleanup := func() {
-		// HTTP закрывается в Stop(); здесь — только клиенты
+		_ = c.chWriter.Close(ctx)
 		_ = c.ch.Close()
 		_ = c.redis.Close()
 		_ = c.nc.Drain()
@@ -100,5 +104,5 @@ func (c *Container) Start() error {
 }
 
 func (c *Container) Stop(ctx context.Context) error {
-	return c.app.Stop(ctx)
+	return c.app.Shutdown(ctx)
 }

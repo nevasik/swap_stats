@@ -111,7 +111,7 @@ func (w *Writer) loop() {
 	ticker := time.NewTicker(w.cfg.BatchMaxInterval)
 	defer ticker.Stop()
 
-	_ = func() {
+	flush := func() {
 		if len(batch) == 0 {
 			return
 		}
@@ -122,8 +122,103 @@ func (w *Writer) loop() {
 		}
 		batch = batch[:0]
 	}
+
+	for {
+		select {
+		case row, ok := <-w.inCh:
+			if !ok {
+				flush()
+				return
+			}
+
+			batch = append(batch, row)
+			if len(batch) >= w.cfg.BatchMaxRows {
+				flush()
+			}
+		case <-ticker.C:
+			flush()
+		case <-w.closedCh:
+		}
+	}
 }
 
-func (w *Writer) insertBatch(ctx context.Context, batch []RawSwapRow) error {
-	return nil
+func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
+	if len(rows) == 0 {
+		return nil
+	}
+
+	// repeat wuth exponential delay
+	backoff := w.cfg.RetryBackoff
+
+	var lastErr error
+
+	for attempt := 0; attempt <= w.cfg.MaxRetries; attempt++ {
+		batch, err := w.conn.PrepareBatch(ctx, `
+			INSERT INTO raw_swaps (
+				event_time,
+				chain_id,
+				tx_hash,
+				log_index,
+				event_id,
+				token_address,
+				token_symbol,
+				pool_address,
+				side,
+				amount_token,
+				amount_usd,
+				block_number,
+				removed,
+				schema_version
+			)
+		`)
+		if err != nil {
+			lastErr = err
+			goto retry
+		}
+
+		for i := range rows {
+			r := &rows[i]
+			var removed uint8
+			if r.Removed {
+				removed = 1
+			}
+
+			if err = batch.Append(
+				r.EventTime,
+				r.ChainID,
+				r.TxHash,
+				r.LogIndex,
+				r.EventID,
+				r.TokenAddress,
+				r.TokenSymbol,
+				r.PoolAddress,
+				r.Side,
+				r.AmountToken,
+				r.AmountUSD,
+				r.BlockNumber,
+				removed,
+				r.SchemaVersion,
+			); err != nil {
+				lastErr = err
+				_ = batch.Abort()
+				goto retry
+			}
+		}
+
+		if err = batch.Send(); err != nil {
+			lastErr = err
+			goto retry
+		}
+		// success
+		return nil
+
+	retry:
+		if attempt == w.cfg.MaxRetries {
+			break
+		}
+		time.Sleep(backoff)
+		backoff *= 2
+	}
+
+	return lastErr
 }

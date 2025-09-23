@@ -1,1 +1,4 @@
 package pubsub
+
+func main() {
+}
