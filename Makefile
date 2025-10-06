@@ -12,3 +12,7 @@ GOLANGCI_LINT = $(PROJECT_BIN)/golangci-lint
 .PHONY: lint
 lint: .install-linter
 	golangci-lint run ./...
+
+.PHONY: tests
+tests:
+	go test ./...
