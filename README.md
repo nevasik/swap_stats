@@ -1,29 +1,29 @@
 # Swap Stats — Implementation Guide
 
---- 
-## ТЗ
-У вас есть 1000 свопов в секунду от производителя (кто, токен, сумма, доллар США, сторона и т.д).
-Производитель также сохраняет эти данные в базе данных.
+---
+## Requirements
+You have 1000 swaps per second from the producer (who, token, amount, USD, party, etc.).
+The producer also stores this data in a database.
 
-Необходимо создать систему, которая вычисляет статистику токенов в реальном времени(объем за 5 минут, объем за 1 час, объем за 24 часа, количество транзакций и т.д)
-и обслуживает эти данные через HTTP API и обновления WebSocket с минимальной задержкой.
+You need to create a system that calculates token statistics in real time (5-minute volume, 1-hour volume, 24-hour volume, number of transactions, etc.)
+and serves this data via an HTTP API and WebSocket updates with minimal latency.
 
-Система должна быть высокодоступной и обрабатывать перезапуски без потери данных или пропуска событий во время запуска.
-Она должна быть масштабируемой, чтобы мы могли запускать больше экземпляров.
-Данные свопов могут содержать дубликаты, а порядок блоков не гарантируется.
+The system must be highly available and handle restarts without data loss or missed events during startup.
+It must be scalable so we can launch more instances.
+Swap data may contain duplicates, and block ordering is not guaranteed.
 
-1. Теоретическая задача. Спроектируйте полную архитектуру.
-- Какие транспортные механизмы вы бы использовали от производителя?
-- Где вы бы хранили различные типы данных?
-- Как вы бы обеспечили высокую доступность и отсутствие потерь данных?
+1. Theoretical Problem. Design the complete architecture.
+- What transport mechanisms would you use from the producer?
+- Where would you store the different types of data?
+- How would you ensure high availability and zero data loss?
 
-2. Практическая задача. Реализуйте сервис Go, который:
-- считывает события свопа из канала
-- вычисляет статистику
-- обслуживает данные по HTTP
-- отправляет обновления в канал WebSocket
-- обрабатывает перезапуски.
-- Используйте интерфейсы для хранения.
+2. Practical task. Implement a Go service that:
+- reads swap events from a channel
+- calculates statistics
+- serves data over HTTP
+- sends updates to a WebSocket channel
+- handles restarts.
+- Use storage interfaces.
 
 ---
 ![img.png](docs/system_design_rus.png)
