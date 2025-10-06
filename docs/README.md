@@ -515,7 +515,7 @@ docker compose -f infra/docker/docker-compose.dev.yml up -d
 **2) Создать/обновить топик:**
 
 ```bash
-./infra/kafka/create_or_update_topic.sh \
+./infra/kafka/create_topic.sh \
   raw-swaps 12 604800000 delete 3600000 "localhost:9092"
 ```
 

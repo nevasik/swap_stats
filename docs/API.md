@@ -2,9 +2,9 @@
 
 **Минимальные эндпоинты:**
 
-* `GET /healthz`
+* `GET /health`
 * `GET /api/overview` — топ токенов по 5m/1h/24h
-* `GET /api/tokens/:id/stats?windows=5m,1h,24h`
+* `GET /api/tokens/:id/stats?windows=5m,1h,24h` - получение статистики по переданному токену в заданном интервале
 
 **Безопасность:** JWT (HS256 dev / RS256 prod), проверяем `exp`, `sub`, `aud`.
 

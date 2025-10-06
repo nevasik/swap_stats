@@ -26,4 +26,4 @@
 - Используйте интерфейсы для хранения.
 
 ---
-![img.png](system_design_rus.png)
+![img.png](docs/system_design_rus.png)

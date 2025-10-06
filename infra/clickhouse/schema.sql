@@ -22,14 +22,14 @@ CREATE TABLE IF NOT EXISTS raw_swaps
     removed         UInt8,
     schema_version  UInt16
     )
-    ENGINE = MergeTree
-    PARTITION BY toYYYYMM(event_date)
-    ORDER BY (chain_id, token_address, event_time, tx_hash, log_index)
-    TTL event_time + INTERVAL 7 DAY TO VOLUME 'cold',
-    event_time + INTERVAL 365 DAY DELETE
-SETTINGS storage_policy = 'hot_to_cold', index_granularity = 8192;
+    ENGINE = MergeTree -- Фоновые процессы сливают парты (merge), упорядочивают строки по ключу ORDER BY, строят первичный индекс и это дает быстрые вставки+дешевую компрессию
+    PARTITION BY toYYYYMM(event_date) -- месячные партиции. Удобно для TTL/удаления и housekeeping; 1 месяц — хороший баланс
+    ORDER BY (chain_id, token_address, event_time, tx_hash, log_index) -- ключ отражает типичные запросы (фильтры по сети/токену/времени) и обеспечивает стабильный порядок (tx_hash+log_index)
+    TTL event_time + INTERVAL 7 DAY TO VOLUME 'cold', -- перекладка старых партов в холодный том
+    event_time + INTERVAL 365 DAY DELETE -- долгий хвост чистится автоматически
+SETTINGS storage_policy = 'hot_to_cold', index_granularity = 8192; -- активирует схему горячий→холодный диск(в storage.xml, где cold=S3/MinIO)
 
--- Суточные агрегаты
+-- суточные суммы для быстрых дашбордов
 CREATE TABLE IF NOT EXISTS daily_token_agg
 (
     day            Date,
@@ -39,10 +39,11 @@ CREATE TABLE IF NOT EXISTS daily_token_agg
     volume_usd     Decimal(20,6), -- суммарный объем
     trades         UInt64 -- общее количество сделок
     )
-    ENGINE = SummingMergeTree
+    ENGINE = SummingMergeTree -- на этапе merge умеет складывать числ. столбцы с одинаковыми ключами и автоматически дает консолидацию большого числа «мелких» строк в итоговые суммы
     PARTITION BY toYYYYMM(day)
     ORDER BY (day, chain_id, token_address);
 
+-- уже делает суммирование в SELECT, а движок ещё и докомпактивает в фоне — это уменьшает размер таблицы и ускоряет сканы
 CREATE MATERIALIZED VIEW IF NOT EXISTS mv_daily_token_agg
 TO daily_token_agg AS
 SELECT
