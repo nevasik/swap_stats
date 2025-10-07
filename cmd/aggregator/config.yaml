@@ -1,7 +1,7 @@
 # File similar to production, but econ in resources
 
 app:
-  instance_id: "swap-sys-1"        # ID инстанса
+  instance_id: "swap-stats-1"        # ID инстанса
   grace: "120s"               # допускаем опоздание событий
   snapshot_interval: "5s"     # период снапшотов состояния
   shutdown_timeout: "10s"
