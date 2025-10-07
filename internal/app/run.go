@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Run We assemble the container, start it, wait for the signal and stop
+// We assemble the container, start it, wait for the signal and stop
 func Run(cfg *config.Config) error {
 	ctxBuild, cancelBuild := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelBuild()
@@ -17,8 +17,8 @@ func Run(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
+	defer cleanup()
 	if err = container.Start(); err != nil {
 		return err
 	}

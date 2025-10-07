@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"gitlab.com/nevasik7/alerting"
+	"gitlab.com/nevasik7/alerting/logger"
 )
 
 type HTTPServer interface {
@@ -14,34 +14,34 @@ type HTTPServer interface {
 }
 
 type App struct {
-	alert   alerting.Alerting
+	log     logger.Logger
 	httpSrv HTTPServer
 }
 
-func New(lg alerting.Alerting, httpSrv HTTPServer) *App {
-	return &App{alert: lg, httpSrv: httpSrv}
+func New(httpSrv HTTPServer, log logger.Logger) *App {
+	return &App{httpSrv: httpSrv, log: log}
 }
 
 func (a *App) Start() error {
-	a.alert.Debug("App started begin...")
+	a.log.Debug("App started begin...")
 
 	go func() {
 		if err := a.httpSrv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			a.alert.Fatalf("Start HTTP server is error=%v", err)
+			a.log.Fatalf("Start HTTP server is error=%v", err)
 		}
 	}()
 
-	a.alert.Info("App started")
+	a.log.Info("App started")
 	return nil
 }
 
 func (a *App) Shutdown(ctx context.Context) error {
-	a.alert.Debug("App stopped begin...")
+	a.log.Debug("App stopped begin...")
 
 	if err := a.httpSrv.Shutdown(ctx); err != nil {
 		return err
 	}
 
-	a.alert.Info("App stopped")
+	a.log.Info("App stopped")
 	return nil
 }
