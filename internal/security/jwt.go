@@ -17,7 +17,14 @@ var (
 	ErrNoBearerToken = errors.New("authorization header must be: Bearer <token>")
 )
 
-// RS256Verifier check JWT RS256 with audience/issuer and allow for shifting hours - leeway.
+type RS256Config struct {
+	PubKeyPath string
+	Audience   string
+	Issuer     string
+	Leeway     time.Duration // IO delay rejection
+}
+
+// RS256Verifier check JWT RS256 with audience/issuer and allow for shifting hours - leeway
 type RS256Verifier struct {
 	pubKey *rsa.PublicKey
 	aud    string
@@ -25,9 +32,9 @@ type RS256Verifier struct {
 	leeway time.Duration
 }
 
-// NewRS256Verifier load pub_key and parsing, audience/issuer can leave empty - not check.
-func NewRS256Verifier(pubKeyPath, audience, issuer string) (*RS256Verifier, error) {
-	b, err := os.ReadFile(pubKeyPath)
+// NewRS256Verifier load pub_key and parsing, audience/issuer can leave empty - not check
+func NewRS256Verifier(cfg RS256Config) (*RS256Verifier, error) {
+	b, err := os.ReadFile(cfg.PubKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key: %w", err)
 	}
@@ -39,13 +46,13 @@ func NewRS256Verifier(pubKeyPath, audience, issuer string) (*RS256Verifier, erro
 
 	return &RS256Verifier{
 		pubKey: pub,
-		aud:    audience,
-		iss:    issuer,
-		leeway: time.Minute,
+		aud:    cfg.Audience,
+		iss:    cfg.Issuer,
+		leeway: cfg.Leeway,
 	}, nil
 }
 
-// VerifyBearer apply header Authorization and validation token.
+// VerifyBearer apply header Authorization and validation token
 func (v *RS256Verifier) VerifyBearer(authHeader string) (any, error) {
 	tokenStr, err := extractBearer(authHeader)
 	if err != nil {

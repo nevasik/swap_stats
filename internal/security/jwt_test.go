@@ -25,7 +25,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	// setup test keys.
+	// setup test keys
 	var err error
 	testPrivateKey, err = rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -38,11 +38,11 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("Failed to generate other private key: %v", err))
 	}
 
-	// create temporary files for public keys.
+	// create temporary files for public keys
 	testPublicKeyPath = createTempPublicKey(testPublicKey)
 	otherPublicKeyPath = createTempPublicKey(&otherPrivateKey.PublicKey)
 
-	// run tests.
+	// run tests
 	code := m.Run()
 
 	// Cleanup
@@ -117,7 +117,12 @@ func TestNewRS256Verifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			verifier, err := NewRS256Verifier(tt.pubKeyPath, tt.audience, tt.issuer)
+			verifier, err := NewRS256Verifier(RS256Config{
+				PubKeyPath: tt.pubKeyPath,
+				Audience:   tt.audience,
+				Issuer:     tt.issuer,
+				Leeway:     time.Second * 30,
+			})
 
 			if tt.wantErr {
 				require.Error(t, err)
@@ -131,14 +136,19 @@ func TestNewRS256Verifier(t *testing.T) {
 			require.NotNil(t, verifier)
 			assert.Equal(t, tt.audience, verifier.aud)
 			assert.Equal(t, tt.issuer, verifier.iss)
-			assert.Equal(t, time.Minute, verifier.leeway)
 			assert.NotNil(t, verifier.pubKey)
 		})
 	}
 }
 
 func TestVerifyBearer_Success(t *testing.T) {
-	verifier, err := NewRS256Verifier(testPublicKeyPath, "test-aud", "test-iss")
+	verifier, err := NewRS256Verifier(RS256Config{
+		PubKeyPath: testPublicKeyPath,
+		Audience:   "test-aud",
+		Issuer:     "test-iss",
+		Leeway:     time.Second * 30,
+	})
+
 	require.NoError(t, err)
 
 	claims := jwt.RegisteredClaims{
@@ -165,7 +175,12 @@ func TestVerifyBearer_Success(t *testing.T) {
 }
 
 func TestVerifyBearer_InvalidTokens(t *testing.T) {
-	verifier, err := NewRS256Verifier(testPublicKeyPath, "test-aud", "test-iss")
+	verifier, err := NewRS256Verifier(RS256Config{
+		PubKeyPath: testPublicKeyPath,
+		Audience:   "test-aud",
+		Issuer:     "test-iss",
+		Leeway:     time.Second * 30,
+	})
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -270,14 +285,19 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 }
 
 func TestVerifyBearer_Leeway(t *testing.T) {
-	verifier, err := NewRS256Verifier(testPublicKeyPath, "", "")
+	verifier, err := NewRS256Verifier(RS256Config{
+		PubKeyPath: testPublicKeyPath,
+		Audience:   "",
+		Issuer:     "",
+		Leeway:     time.Second * 30,
+	})
 	require.NoError(t, err)
 
 	// token expired 30 seconds ago, but leeway is 1 minute.
 	claims := jwt.RegisteredClaims{
 		Subject: "user123",
 		ExpiresAt: &jwt.NumericDate{
-			Time: time.Now().Add(-30 * time.Second),
+			Time: time.Now().Add(-29 * time.Second),
 		},
 		IssuedAt: &jwt.NumericDate{
 			Time: time.Now().Add(-2 * time.Minute),
@@ -294,7 +314,11 @@ func TestVerifyBearer_Leeway(t *testing.T) {
 
 func TestVerifyBearer_WithoutAudienceIssuer(t *testing.T) {
 	// verifier without audience/issuer checks.
-	verifier, err := NewRS256Verifier(testPublicKeyPath, "", "")
+	verifier, err := NewRS256Verifier(RS256Config{
+		PubKeyPath: testPublicKeyPath,
+		Audience:   "",
+		Issuer:     "",
+	})
 	require.NoError(t, err)
 
 	claims := jwt.RegisteredClaims{
@@ -475,7 +499,11 @@ func TestParseRSAPublicKeyFromPem(t *testing.T) {
 
 func TestRS256Verifier_EdgeCases(t *testing.T) {
 	t.Run("nil claims after verification", func(t *testing.T) {
-		verifier, err := NewRS256Verifier(testPublicKeyPath, "", "")
+		verifier, err := NewRS256Verifier(RS256Config{
+			PubKeyPath: testPublicKeyPath,
+			Audience:   "",
+			Issuer:     "",
+		})
 		require.NoError(t, err)
 
 		// check uncorrected jwt token.
@@ -487,7 +515,11 @@ func TestRS256Verifier_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("different signing method", func(t *testing.T) {
-		verifier, err := NewRS256Verifier(testPublicKeyPath, "", "")
+		verifier, err := NewRS256Verifier(RS256Config{
+			PubKeyPath: testPublicKeyPath,
+			Audience:   "",
+			Issuer:     "",
+		})
 		require.NoError(t, err)
 
 		// create token with different signing method.
