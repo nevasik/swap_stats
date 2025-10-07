@@ -13,8 +13,8 @@ type Conn struct {
 	Native ch.Conn
 }
 
-func New(ctx context.Context, cfg config.ClickHouse) (*Conn, error) {
-	opts, err := ch.ParseDSN(cfg.DSN)
+func New(ctx context.Context, cfg config.Config) (*Conn, error) {
+	opts, err := ch.ParseDSN(cfg.Stores.ClickHouse.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed parse DSN ch, error=%w", err)
 	}

@@ -32,7 +32,7 @@ type Writer struct {
 	alert alerting.Alerting
 
 	conn ch.Conn
-	cfg  config.ClickHouseWriter
+	cfg  config.ClickHouseConfig
 
 	inCh      chan RawSwapRow
 	closedCh  chan struct{}
@@ -40,19 +40,19 @@ type Writer struct {
 	wg        sync.WaitGroup
 }
 
-func NewWriter(alert alerting.Alerting, conn ch.Conn, cfg config.ClickHouseWriter) *Writer {
+func NewWriter(alert alerting.Alerting, conn ch.Conn, cfg config.ClickHouseConfig) *Writer {
 	// sane defaults
-	if cfg.BatchMaxRows <= 0 {
-		cfg.BatchMaxRows = 1000
+	if cfg.Writer.BatchMaxRows <= 0 {
+		cfg.Writer.BatchMaxRows = 1000
 	}
-	if cfg.BatchMaxInterval <= 0 {
-		cfg.BatchMaxInterval = 200 * time.Millisecond
+	if cfg.Writer.BatchMaxInterval <= 0 {
+		cfg.Writer.BatchMaxInterval = 200 * time.Millisecond
 	}
-	if cfg.MaxRetries < 0 {
-		cfg.MaxRetries = 0
+	if cfg.Writer.MaxRetries < 0 {
+		cfg.Writer.MaxRetries = 0
 	}
-	if cfg.RetryBackoff <= 0 {
-		cfg.RetryBackoff = 200 * time.Millisecond
+	if cfg.Writer.RetryBackoff <= 0 {
+		cfg.Writer.RetryBackoff = 200 * time.Millisecond
 	}
 
 	w := &Writer{
@@ -107,8 +107,8 @@ func (w *Writer) Close(ctx context.Context) error {
 func (w *Writer) loop() {
 	defer w.wg.Done()
 
-	batch := make([]RawSwapRow, 0, w.cfg.BatchMaxRows)
-	ticker := time.NewTicker(w.cfg.BatchMaxInterval)
+	batch := make([]RawSwapRow, 0, w.cfg.Writer.BatchMaxRows)
+	ticker := time.NewTicker(w.cfg.Writer.BatchMaxInterval)
 	defer ticker.Stop()
 
 	flush := func() {
@@ -132,7 +132,7 @@ func (w *Writer) loop() {
 			}
 
 			batch = append(batch, row)
-			if len(batch) >= w.cfg.BatchMaxRows {
+			if len(batch) >= w.cfg.Writer.BatchMaxRows {
 				flush()
 			}
 		case <-ticker.C:
@@ -148,11 +148,11 @@ func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
 	}
 
 	// repeat wuth exponential delay
-	backoff := w.cfg.RetryBackoff
+	backoff := w.cfg.Writer.RetryBackoff
 
 	var lastErr error
 
-	for attempt := 0; attempt <= w.cfg.MaxRetries; attempt++ {
+	for attempt := 0; attempt <= w.cfg.Writer.MaxRetries; attempt++ {
 		batch, err := w.conn.PrepareBatch(ctx, `
 			INSERT INTO raw_swaps (
 				event_time,
@@ -213,7 +213,7 @@ func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
 		return nil
 
 	retry:
-		if attempt == w.cfg.MaxRetries {
+		if attempt == w.cfg.Writer.MaxRetries {
 			break
 		}
 		time.Sleep(backoff)

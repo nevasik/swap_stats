@@ -1,4 +1,1 @@
 package pubsub
-
-func main() {
-}

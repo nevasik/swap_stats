@@ -24,7 +24,7 @@ type RS256Config struct {
 	Leeway     time.Duration // IO delay rejection
 }
 
-// RS256Verifier check JWT RS256 with audience/issuer and allow for shifting hours - leeway
+// Check JWT RS256 with audience/issuer and allow for shifting hours - leeway
 type RS256Verifier struct {
 	pubKey *rsa.PublicKey
 	aud    string
@@ -32,7 +32,7 @@ type RS256Verifier struct {
 	leeway time.Duration
 }
 
-// NewRS256Verifier load pub_key and parsing, audience/issuer can leave empty - not check
+// Load pub_key and parsing, audience/issuer can leave empty - not check
 func NewRS256Verifier(cfg RS256Config) (*RS256Verifier, error) {
 	b, err := os.ReadFile(cfg.PubKeyPath)
 	if err != nil {
@@ -52,14 +52,13 @@ func NewRS256Verifier(cfg RS256Config) (*RS256Verifier, error) {
 	}, nil
 }
 
-// VerifyBearer apply header Authorization and validation token
+// Apply header Authorization and validation token
 func (v *RS256Verifier) VerifyBearer(authHeader string) (any, error) {
 	tokenStr, err := extractBearer(authHeader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract bearer token: %w", err)
 	}
 
-	claims := &jwt.RegisteredClaims{}
 	opts := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}), // only RS256
 		jwt.WithLeeway(v.leeway),
@@ -74,10 +73,10 @@ func (v *RS256Verifier) VerifyBearer(authHeader string) (any, error) {
 		opts = append(opts, jwt.WithIssuer(v.iss))
 	}
 
-	_, err = jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (any, error) {
+	claims := &jwt.RegisteredClaims{}
+	if _, err = jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (any, error) {
 		return v.pubKey, nil
-	}, opts...)
-	if err != nil {
+	}, opts...); err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
 

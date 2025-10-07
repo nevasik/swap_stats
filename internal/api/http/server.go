@@ -2,55 +2,50 @@ package http
 
 import (
 	"context"
-	"dexcelerate/internal/stores/clickhouse"
+	"dexcelerate/internal/api/http/mw"
 	"net/http"
+	"time"
 
-	"dexcelerate/internal/config"
-	"dexcelerate/internal/security"
-	rds "dexcelerate/internal/stores/redis"
-
-	ch "github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/nats-io/nats.go"
-	"gitlab.com/nevasik7/alerting/logger"
+	"github.com/go-chi/chi/v5"
 )
 
+type ServerDeps struct {
+	Addr      string
+	API       *API
+	JWT       *mw.JWTMiddleware
+	Gzip      *mw.GzipMiddleware
+	Logging   *mw.LoggingMiddleware
+	RateLimit *mw.RateLimitMiddleware
+	CORS      *mw.CORSMiddleware
+
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
+	IdleTimeout  time.Duration
+}
+
 type Server struct {
-	log   logger.Logger
-	cfg   *config.Config
-	srv   *http.Server
-	jwt   *security.Verifier
-	redis *rds.Client
-	ch    *ch.Conn
-	nc    *nats.Conn
-	js    nats.JetStreamContext
+	srv    *http.Server
+	Router chi.Router
 }
 
-func NewServer(
-	log logger.Logger,
-	cfg *config.Config,
-	jwt *security.Verifier,
-	redis *rds.Client,
-	ch *clickhouse.Conn,
-	nc *nats.Conn,
-	js nats.JetStreamContext,
-) *Server {
-	return &Server{
-		log:   log,
-		cfg:   cfg,
-		jwt:   jwt,
-		redis: redis,
-		ch:    ch,
-		nc:    nc,
-		js:    js,
+func NewServer(d ServerDeps) *Server {
+	router := BuildRouter(d.API, d.Logging, d.Gzip, d.RateLimit, d.JWT, d.CORS)
+
+	s := &http.Server{
+		Addr:         d.Addr,
+		Handler:      router,
+		ReadTimeout:  d.ReadTimeout,
+		WriteTimeout: d.WriteTimeout,
+		IdleTimeout:  d.IdleTimeout,
 	}
+
+	return &Server{srv: s, Router: router}
 }
 
-func (s Server) Start() error {
-	//TODO implement me
-	panic("implement me")
+func (s *Server) Start() error {
+	return s.srv.ListenAndServe()
 }
 
-func (s Server) Shutdown(ctx context.Context) error {
-	//TODO implement me
-	panic("implement me")
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.srv.Shutdown(ctx)
 }
