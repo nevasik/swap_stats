@@ -166,6 +166,16 @@ services:
     environment:
       - NATS_URL=nats://dev:devpass@nats:4222
 
+  # pprof
+  pyroscope:
+    image: grafana/pyroscope:latest
+    ports:
+      - "4040:4040"
+    command:
+      - "server"
+    environment:
+      - PYROSCOPE_LOG_LEVEL=debug
+
 volumes:
   minio-data:
   ch-data:
