@@ -8,10 +8,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// key for claims in ctx
+// Key for claims in ctx
 type claimsCtxKey struct{}
 
-// ClaimsFromContext get *jwt.RegisteredClaims from ctx if exists
+// Get *jwt.RegisteredClaims from ctx if exists
 func ClaimsFromContext(ctx context.Context) *jwt.RegisteredClaims {
 	if v := ctx.Value(claimsCtxKey{}); v != nil {
 		if c, ok := v.(*jwt.RegisteredClaims); ok {

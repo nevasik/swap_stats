@@ -21,7 +21,7 @@ type RS256Config struct {
 	PubKeyPath string
 	Audience   string
 	Issuer     string
-	Leeway     time.Duration // IO delay rejection
+	Leeway     time.Duration // io operation delay rejection
 }
 
 // Check JWT RS256 with audience/issuer and allow for shifting hours - leeway
