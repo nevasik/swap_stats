@@ -6,20 +6,17 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-
-	"gitlab.com/nevasik7/alerting/logger"
 )
 
 type GzipMiddleware struct {
-	Level  int // gzip.NoCompression ... gzip.BestCompression
-	Logger logger.Logger
+	Level int // gzip.NoCompression ... gzip.BestCompression
 }
 
-func NewGzip(level int, log logger.Logger) *GzipMiddleware {
+func NewGzip(level int) *GzipMiddleware {
 	if level == 0 {
 		level = gzip.BestSpeed
 	}
-	return &GzipMiddleware{Level: level, Logger: log}
+	return &GzipMiddleware{Level: level}
 }
 
 func (m *GzipMiddleware) Handler(next http.Handler) http.Handler {
@@ -53,9 +50,7 @@ func (m *GzipMiddleware) Handler(next http.Handler) http.Handler {
 
 		gzw.Reset(w)
 		defer func(gzw *gzip.Writer) {
-			if err := gzw.Close(); err != nil {
-				m.Logger.Errorf("failed to close gzip writer: %v", err)
-			}
+			_ = gzw.Close()
 		}(gzw)
 	})
 }

@@ -81,7 +81,7 @@ func (m *MockLogger) Errorf(format string, args ...interface{}) {
 func TestConnect_NilConfig(t *testing.T) {
 	mockLogger := new(MockLogger)
 
-	client, err := Connect(nil, mockLogger)
+	client, err := New(nil, mockLogger)
 
 	assert.Error(t, err)
 	assert.Nil(t, client)
@@ -95,7 +95,7 @@ func TestConnect_EmptyURL(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.PubSub.NATS.URL = ""
 
-	client, err := Connect(cfg, mockLogger)
+	client, err := New(cfg, mockLogger)
 
 	assert.Error(t, err)
 	assert.Nil(t, client)
@@ -166,7 +166,7 @@ func TestConnect_Success(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.PubSub.NATS.URL = url
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 
 		require.NoError(t, err)
 		require.NotNil(t, client)
@@ -191,7 +191,7 @@ func TestConnect_WithBroadcastPrefix(t *testing.T) {
 		cfg.PubSub.NATS.URL = url
 		cfg.PubSub.NATS.BroadcastPrefix = "broadcast.test"
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 
 		require.NoError(t, err)
 		require.NotNil(t, client)
@@ -214,7 +214,7 @@ func TestClose_Success(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.PubSub.NATS.URL = url
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 		require.NoError(t, err)
 
 		err = client.Close()
@@ -236,7 +236,7 @@ func TestReady_States(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.PubSub.NATS.URL = url
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 		require.NoError(t, err)
 
 		// check what conn ready
@@ -259,7 +259,7 @@ func TestStatus_VariousStates(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.PubSub.NATS.URL = url
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 		require.NoError(t, err)
 
 		assert.Equal(t, nats.CONNECTED, client.Status())
@@ -280,7 +280,7 @@ func TestClose_Idempotent(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.PubSub.NATS.URL = url
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 		require.NoError(t, err)
 
 		err = client.Close()
@@ -304,7 +304,7 @@ func TestReconnectBehavior(t *testing.T) {
 		cfg := &config.Config{}
 		cfg.PubSub.NATS.URL = url
 
-		client, err := Connect(cfg, mockLogger)
+		client, err := New(cfg, mockLogger)
 		require.NoError(t, err)
 
 		assert.True(t, client.Ready())

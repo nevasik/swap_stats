@@ -1,6 +1,7 @@
 package http
 
 import (
+	"dexcelerate/internal/api/http/handlers"
 	"dexcelerate/internal/api/http/mw"
 	"dexcelerate/internal/metrics"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func BuildRouter(
-	api *API,
+	api *handlers.API,
 	logMW *mw.LoggingMiddleware,
 	gzipMW *mw.GzipMiddleware,
 	rateLimitMW *mw.RateLimitMiddleware,
@@ -32,27 +33,26 @@ func BuildRouter(
 		r.Use(corsMW.Handler())
 	}
 
-	// tech endpoint not auth
+	// public tech
 	r.Get("/healthz", api.Healthz)
 	r.Get("/readiness", api.Readiness)
 	r.Mount("/metrics", metrics.Handler())
 
-	// tech endpoint with rate limit and jwt
-	protected := chi.NewRouter()
-	if rateLimitMW != nil {
-		r.Use(rateLimitMW.Handler)
-	}
-	if jwtMW != nil {
-		r.Use(jwtMW.Handler)
-	}
+	// protected (JWT + RL)
+	r.Group(func(protected chi.Router) {
+		if rateLimitMW != nil {
+			protected.Use(rateLimitMW.Handler)
+		}
+		if jwtMW != nil {
+			protected.Use(jwtMW.Handler)
+		}
 
-	protected.Route("/api", func(apiR chi.Router) {
-		apiR.Get("/overview", api.Overview)
-		apiR.Route("/tokens", func(tt chi.Router) {
-			tt.Get("/{id}/stats", api.TokenStats)
+		protected.Route("/api", func(apiR chi.Router) {
+			apiR.Get("/overview", api.Overview)
+			apiR.Route("/tokens", func(tt chi.Router) {
+				tt.Get("/{id}/stats", api.TokenStats)
+			})
 		})
 	})
-
-	r.Mount("/", protected)
 	return r
 }

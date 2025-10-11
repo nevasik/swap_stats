@@ -15,12 +15,12 @@ type Client struct {
 	log logger.Logger
 }
 
-func Connect(cfg *config.Config, log logger.Logger) (*Client, error) {
+func New(log logger.Logger, cfg *config.NATSConfig) (*Client, error) {
 	if cfg == nil {
-		return nil, errors.New("config is required")
+		return nil, errors.New("nats config is required")
 	}
 
-	url := cfg.PubSub.NATS.URL
+	url := cfg.URL
 	if url == "" {
 		return nil, errors.New("nats url is required")
 	}
@@ -37,8 +37,6 @@ func Connect(cfg *config.Config, log logger.Logger) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
-
-	log.Infof("Connected to NATS successfully, url=%s", url)
 
 	return &Client{
 		nc:  nc,

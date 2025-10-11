@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"dexcelerate/internal/api/http/handlers"
 	"dexcelerate/internal/api/http/mw"
 	"net/http"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 type ServerDeps struct {
 	Addr      string
-	API       *API
+	API       *handlers.API
 	JWT       *mw.JWTMiddleware
 	Gzip      *mw.GzipMiddleware
 	Logging   *mw.LoggingMiddleware

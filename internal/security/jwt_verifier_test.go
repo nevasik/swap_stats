@@ -97,8 +97,8 @@ func TestNewRS256Verifier(t *testing.T) {
 		{
 			name:       "successful creation",
 			pubKeyPath: testPublicKeyPath,
-			audience:   "test-aud",
-			issuer:     "test-iss",
+			audience:   "test-Aud",
+			issuer:     "test-Iss",
 			wantErr:    false,
 		},
 		{
@@ -117,7 +117,7 @@ func TestNewRS256Verifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			verifier, err := NewRS256Verifier(RS256Config{
+			verifier, err := NewRS256Verifier(&RS256Config{
 				PubKeyPath: tt.pubKeyPath,
 				Audience:   tt.audience,
 				Issuer:     tt.issuer,
@@ -134,18 +134,18 @@ func TestNewRS256Verifier(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, verifier)
-			assert.Equal(t, tt.audience, verifier.aud)
-			assert.Equal(t, tt.issuer, verifier.iss)
-			assert.NotNil(t, verifier.pubKey)
+			assert.Equal(t, tt.audience, verifier.Aud)
+			assert.Equal(t, tt.issuer, verifier.Iss)
+			assert.NotNil(t, verifier.PubKey)
 		})
 	}
 }
 
 func TestVerifyBearer_Success(t *testing.T) {
-	verifier, err := NewRS256Verifier(RS256Config{
+	verifier, err := NewRS256Verifier(&RS256Config{
 		PubKeyPath: testPublicKeyPath,
-		Audience:   "test-aud",
-		Issuer:     "test-iss",
+		Audience:   "test-Aud",
+		Issuer:     "test-Iss",
 		Leeway:     time.Second * 30,
 	})
 
@@ -153,8 +153,8 @@ func TestVerifyBearer_Success(t *testing.T) {
 
 	claims := jwt.RegisteredClaims{
 		Subject:  "user123",
-		Audience: jwt.ClaimStrings{"test-aud"},
-		Issuer:   "test-iss",
+		Audience: jwt.ClaimStrings{"test-Aud"},
+		Issuer:   "test-Iss",
 		ExpiresAt: &jwt.NumericDate{
 			Time: time.Now().Add(time.Hour),
 		},
@@ -175,10 +175,10 @@ func TestVerifyBearer_Success(t *testing.T) {
 }
 
 func TestVerifyBearer_InvalidTokens(t *testing.T) {
-	verifier, err := NewRS256Verifier(RS256Config{
+	verifier, err := NewRS256Verifier(&RS256Config{
 		PubKeyPath: testPublicKeyPath,
-		Audience:   "test-aud",
-		Issuer:     "test-iss",
+		Audience:   "test-Aud",
+		Issuer:     "test-Iss",
 		Leeway:     time.Second * 30,
 	})
 	require.NoError(t, err)
@@ -193,8 +193,8 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 			setupToken: func() string {
 				claims := jwt.RegisteredClaims{
 					Subject:  "user123",
-					Audience: jwt.ClaimStrings{"test-aud"},
-					Issuer:   "test-iss",
+					Audience: jwt.ClaimStrings{"test-Aud"},
+					Issuer:   "test-Iss",
 					ExpiresAt: &jwt.NumericDate{
 						Time: time.Now().Add(time.Hour),
 					},
@@ -209,8 +209,8 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 			setupToken: func() string {
 				claims := jwt.RegisteredClaims{
 					Subject:  "user123",
-					Audience: jwt.ClaimStrings{"test-aud"},
-					Issuer:   "test-iss",
+					Audience: jwt.ClaimStrings{"test-Aud"},
+					Issuer:   "test-Iss",
 					ExpiresAt: &jwt.NumericDate{
 						Time: time.Now().Add(-time.Hour),
 					},
@@ -224,8 +224,8 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 			setupToken: func() string {
 				claims := jwt.RegisteredClaims{
 					Subject:  "user123",
-					Audience: jwt.ClaimStrings{"wrong-aud"},
-					Issuer:   "test-iss",
+					Audience: jwt.ClaimStrings{"wrong-Aud"},
+					Issuer:   "test-Iss",
 					ExpiresAt: &jwt.NumericDate{
 						Time: time.Now().Add(time.Hour),
 					},
@@ -239,8 +239,8 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 			setupToken: func() string {
 				claims := jwt.RegisteredClaims{
 					Subject:  "user123",
-					Audience: jwt.ClaimStrings{"test-aud"},
-					Issuer:   "wrong-iss",
+					Audience: jwt.ClaimStrings{"test-Aud"},
+					Issuer:   "wrong-Iss",
 					ExpiresAt: &jwt.NumericDate{
 						Time: time.Now().Add(time.Hour),
 					},
@@ -254,8 +254,8 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 			setupToken: func() string {
 				claims := jwt.RegisteredClaims{
 					Subject:  "user123",
-					Audience: jwt.ClaimStrings{"test-aud"},
-					Issuer:   "test-iss",
+					Audience: jwt.ClaimStrings{"test-Aud"},
+					Issuer:   "test-Iss",
 					ExpiresAt: &jwt.NumericDate{
 						Time: time.Now().Add(time.Hour),
 					},
@@ -285,7 +285,7 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 }
 
 func TestVerifyBearer_Leeway(t *testing.T) {
-	verifier, err := NewRS256Verifier(RS256Config{
+	verifier, err := NewRS256Verifier(&RS256Config{
 		PubKeyPath: testPublicKeyPath,
 		Audience:   "",
 		Issuer:     "",
@@ -293,7 +293,7 @@ func TestVerifyBearer_Leeway(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// token expired 30 seconds ago, but leeway is 1 minute.
+	// token expired 30 seconds ago, but Leeway is 1 minute.
 	claims := jwt.RegisteredClaims{
 		Subject: "user123",
 		ExpiresAt: &jwt.NumericDate{
@@ -314,7 +314,7 @@ func TestVerifyBearer_Leeway(t *testing.T) {
 
 func TestVerifyBearer_WithoutAudienceIssuer(t *testing.T) {
 	// verifier without audience/issuer checks.
-	verifier, err := NewRS256Verifier(RS256Config{
+	verifier, err := NewRS256Verifier(&RS256Config{
 		PubKeyPath: testPublicKeyPath,
 		Audience:   "",
 		Issuer:     "",
@@ -499,7 +499,7 @@ func TestParseRSAPublicKeyFromPem(t *testing.T) {
 
 func TestRS256Verifier_EdgeCases(t *testing.T) {
 	t.Run("nil claims after verification", func(t *testing.T) {
-		verifier, err := NewRS256Verifier(RS256Config{
+		verifier, err := NewRS256Verifier(&RS256Config{
 			PubKeyPath: testPublicKeyPath,
 			Audience:   "",
 			Issuer:     "",
@@ -515,7 +515,7 @@ func TestRS256Verifier_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("different signing method", func(t *testing.T) {
-		verifier, err := NewRS256Verifier(RS256Config{
+		verifier, err := NewRS256Verifier(&RS256Config{
 			PubKeyPath: testPublicKeyPath,
 			Audience:   "",
 			Issuer:     "",

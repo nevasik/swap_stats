@@ -3,24 +3,31 @@ package redis
 import (
 	"context"
 	"dexcelerate/internal/config"
+	"fmt"
 
 	goredis "github.com/redis/go-redis/v9"
+	"gitlab.com/nevasik7/alerting/logger"
 )
 
 type Client struct {
+	lg logger.Logger
 	*goredis.Client
 }
 
-func New(ctx context.Context, cfg config.Redis) (*Client, error) {
+func New(ctx context.Context, lg logger.Logger, cfg *config.RedisConfig) (*Client, error) {
 	rdb := goredis.NewClient(&goredis.Options{
-		Addr:     cfg.Addr,
-		Password: cfg.Password,
-		DB:       cfg.DB,
+		Addr:         cfg.Addr,
+		Username:     cfg.Username,
+		Password:     cfg.Password,
+		DB:           cfg.DB,
+		DialTimeout:  cfg.DialTimeout,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
 	})
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
 
-	return &Client{rdb}, nil
+	return &Client{Client: rdb}, nil
 }

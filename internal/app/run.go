@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"dexcelerate/internal/config"
+	"fmt"
 	"os/signal"
 	"syscall"
 	"time"
@@ -18,16 +19,19 @@ func Run(cfg *config.Config) error {
 		return err
 	}
 
+	if cleanup == nil {
+		return fmt.Errorf("cleanup is nil")
+	}
 	defer cleanup()
+
 	if err = container.Start(); err != nil {
 		return err
 	}
 
-	sigCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	sigCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer stop()
+
 	<-sigCtx.Done()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	return container.Stop(shutdownCtx)
+	return container.Stop()
 }

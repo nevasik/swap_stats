@@ -11,16 +11,6 @@ import (
 // Key for claims in ctx
 type claimsCtxKey struct{}
 
-// Get *jwt.RegisteredClaims from ctx if exists
-func ClaimsFromContext(ctx context.Context) *jwt.RegisteredClaims {
-	if v := ctx.Value(claimsCtxKey{}); v != nil {
-		if c, ok := v.(*jwt.RegisteredClaims); ok {
-			return c
-		}
-	}
-	return nil
-}
-
 type JWTMiddleware struct {
 	verifier *security.RS256Verifier // may be nil if JWT.enabled=false
 }

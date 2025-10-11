@@ -3,20 +3,16 @@ package mw
 import (
 	"net/http"
 	"time"
+
+	"gitlab.com/nevasik7/alerting/logger"
 )
 
-type Logger interface {
-	Info(msg string, kv ...any)
-	Warn(msg string, kv ...any)
-	Error(msg string, kv ...any)
-}
-
 type LoggingMiddleware struct {
-	Log Logger
+	Logger logger.Logger
 }
 
-func NewLogging(log Logger) *LoggingMiddleware {
-	return &LoggingMiddleware{Log: log}
+func NewLogging(logger logger.Logger) *LoggingMiddleware {
+	return &LoggingMiddleware{Logger: logger}
 }
 
 func (m *LoggingMiddleware) Handler(next http.Handler) http.Handler {
@@ -33,15 +29,8 @@ func (m *LoggingMiddleware) Handler(next http.Handler) http.Handler {
 			remoteIP = r.RemoteAddr
 		}
 
-		m.Log.Info("http_request",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", lrw.status,
-			"size", lrw.size,
-			"dur_ms", dur.Milliseconds(),
-			"ip", remoteIP,
-			"ua", r.UserAgent(),
-		)
+		m.Logger.Infof("%s %s -> %d (%d bytes, %dms) [IP: %s, UA: %s]",
+			r.Method, r.URL.Path, lrw.status, lrw.size, dur.Milliseconds(), remoteIP, r.UserAgent())
 	})
 }
 

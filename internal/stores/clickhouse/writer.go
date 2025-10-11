@@ -7,8 +7,7 @@ import (
 	"sync"
 	"time"
 
-	ch "github.com/ClickHouse/clickhouse-go/v2"
-	"gitlab.com/nevasik7/alerting"
+	"gitlab.com/nevasik7/alerting/logger"
 )
 
 type RawSwapRow struct {
@@ -29,18 +28,16 @@ type RawSwapRow struct {
 }
 
 type Writer struct {
-	alert alerting.Alerting
-
-	conn ch.Conn
-	cfg  config.ClickHouseConfig
-
+	Log       logger.Logger
+	Conn      *Conn
+	cfg       *config.ClickHouseConfig
 	inCh      chan RawSwapRow
 	closedCh  chan struct{}
 	closeOnce sync.Once
 	wg        sync.WaitGroup
 }
 
-func NewWriter(alert alerting.Alerting, conn ch.Conn, cfg config.ClickHouseConfig) *Writer {
+func NewWriter(log logger.Logger, conn *Conn, cfg *config.ClickHouseConfig) *Writer {
 	// sane defaults
 	if cfg.Writer.BatchMaxRows <= 0 {
 		cfg.Writer.BatchMaxRows = 1000
@@ -56,8 +53,8 @@ func NewWriter(alert alerting.Alerting, conn ch.Conn, cfg config.ClickHouseConfi
 	}
 
 	w := &Writer{
-		alert:    alert,
-		conn:     conn,
+		Log:      log,
+		Conn:     conn,
 		cfg:      cfg,
 		inCh:     make(chan RawSwapRow, 8192), // ring buffer = expected EPS peak * time_to_level off
 		closedCh: make(chan struct{}),
@@ -118,7 +115,7 @@ func (w *Writer) loop() {
 
 		if err := w.insertBatch(context.Background(), batch); err != nil {
 			// TODO прокинуть метрики
-			w.alert.ErrorfLogAndAlert("Failed insert [%d] rows by batch to clickhouse, error=%v", len(batch), err)
+			w.Log.Errorf("Failed insert [%d] rows by batch to clickhouse, error=%v", len(batch), err)
 		}
 		batch = batch[:0]
 	}
@@ -147,13 +144,13 @@ func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
 		return nil
 	}
 
-	// repeat wuth exponential delay
+	// repeat with exponential delay
 	backoff := w.cfg.Writer.RetryBackoff
 
 	var lastErr error
 
 	for attempt := 0; attempt <= w.cfg.Writer.MaxRetries; attempt++ {
-		batch, err := w.conn.PrepareBatch(ctx, `
+		batch, err := w.Conn.Native.PrepareBatch(ctx, `
 			INSERT INTO raw_swaps (
 				event_time,
 				chain_id,

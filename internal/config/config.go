@@ -38,36 +38,28 @@ type AlertingConfig struct {
 	Token   string `yaml:"token"`
 	ChatID  string `yaml:"chat_id"`
 }
-
-type JWTConfig struct {
-	Enabled        bool   `yaml:"enabled"`
-	Alg            string `yaml:"alg"` // RS256
-	PublicKeyPath  string `yaml:"public_key_path"`
-	PrivateKeyPath string `yaml:"private_key_path"`
-	Audience       string `yaml:"audience"`
-	Issuer         string `yaml:"issuer"`
-}
-
 type SecurityConfig struct {
 	JWT JWTConfig `yaml:"jwt"`
 }
 
-type RateLimitConfig struct {
-	ByJWT struct {
-		RefillPerSec int `yaml:"refill_per_sec"`
-		Burst        int `yaml:"burst"`
-	} `yaml:"by_jwt"`
-	ByIP struct {
-		RefillPerSec int `yaml:"refill_per_sec"`
-		Burst        int `yaml:"burst"`
-	} `yaml:"by_ip"`
+type JWTConfig struct {
+	Enabled        bool          `yaml:"enabled"`
+	PublicKeyPath  string        `yaml:"public_key_path"`
+	PrivateKeyPath string        `yaml:"private_key_path"`
+	Audience       string        `yaml:"audience"`
+	Issuer         string        `yaml:"issuer"`
+	Leeway         time.Duration `yaml:"leeway_timeout"`
 }
 
-type TLSConfig struct {
-	Enabled  bool   `yaml:"enabled"`
-	CAFile   string `yaml:"ca_file"`
-	CertFile string `yaml:"cert_file"`
-	KeyFile  string `yaml:"key_file"`
+type RateLimitConfig struct {
+	ByJWT RateBucket `yaml:"by_jwt"`
+	ByIP  RateBucket `yaml:"by_ip"`
+}
+
+type RateBucket struct {
+	RefillPerSec int           `yaml:"refill_per_sec"`
+	Burst        int           `yaml:"burst"` // max len bucket
+	TTL          time.Duration `yaml:"ttl"`   // how long should you keep a key if it isn't use
 }
 
 type IngestConfig struct {
@@ -83,8 +75,20 @@ type IngestConfig struct {
 	TLS              TLSConfig     `yaml:"tls"`
 }
 
+type TLSConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	CAFile   string `yaml:"ca_file"`
+	CertFile string `yaml:"cert_file"`
+	KeyFile  string `yaml:"key_file"`
+}
+
 type DedupeConfig struct {
 	TTL time.Duration `yaml:"ttl"`
+}
+
+type StoresConfig struct {
+	Redis      RedisConfig      `yaml:"redis"`
+	ClickHouse ClickHouseConfig `yaml:"clickhouse"`
 }
 
 type RedisConfig struct {
@@ -98,6 +102,11 @@ type RedisConfig struct {
 	WriteTimeout time.Duration `yaml:"write_timeout"`
 }
 
+type ClickHouseConfig struct {
+	DSN    string                 `yaml:"dsn"`
+	Writer ClickHouseWriterConfig `yaml:"writer"`
+}
+
 type ClickHouseWriterConfig struct {
 	BatchMaxRows     int           `yaml:"batch_max_rows"`
 	BatchMaxInterval time.Duration `yaml:"batch_max_interval"`
@@ -105,14 +114,8 @@ type ClickHouseWriterConfig struct {
 	RetryBackoff     time.Duration `yaml:"retry_backoff"`
 }
 
-type ClickHouseConfig struct {
-	DSN    string                 `yaml:"dsn"`
-	Writer ClickHouseWriterConfig `yaml:"writer"`
-}
-
-type StoresConfig struct {
-	Redis      RedisConfig      `yaml:"redis"`
-	ClickHouse ClickHouseConfig `yaml:"clickhouse"`
+type PubSubConfig struct {
+	NATS NATSConfig `yaml:"nats"`
 }
 
 type NATSConfig struct {
@@ -120,15 +123,9 @@ type NATSConfig struct {
 	BroadcastPrefix string `yaml:"broadcast_prefix"`
 }
 
-type PubSubConfig struct {
-	NATS NATSConfig `yaml:"nats"`
-}
-
-type CORSConfig struct {
-	Enabled bool     `yaml:"enabled"`
-	Origins []string `yaml:"origins"`
-	Methods []string `yaml:"methods"`
-	Headers []string `yaml:"headers"`
+type APIConfig struct {
+	HTTP HTTPConfig `yaml:"http"`
+	WS   WSConfig   `yaml:"ws"`
 }
 
 type HTTPConfig struct {
@@ -139,6 +136,13 @@ type HTTPConfig struct {
 	CORS         CORSConfig    `yaml:"cors"`
 }
 
+type CORSConfig struct {
+	Enabled bool     `yaml:"enabled"`
+	Origins []string `yaml:"origins"`
+	Methods []string `yaml:"methods"`
+	Headers []string `yaml:"headers"`
+}
+
 type WSConfig struct {
 	CoalesceMS        int           `yaml:"coalesce_ms"`
 	MaxConn           int           `yaml:"max_conn"`
@@ -147,14 +151,9 @@ type WSConfig struct {
 	HeartbeatInterval time.Duration `yaml:"heartbeat_interval"`
 }
 
-type APIConfig struct {
-	HTTP HTTPConfig `yaml:"http"`
-	WS   WSConfig   `yaml:"ws"`
-}
-
 type MetricsConfig struct {
 	Prometheus string `yaml:"prometheus"`
-	PPROF      string `yaml:"pprof"`
+	PProf      string `yaml:"pprof"`
 }
 
 func Load(path string) (*Config, error) {

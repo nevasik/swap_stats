@@ -3,6 +3,7 @@ package security
 import (
 	"crypto/rsa"
 	"crypto/x509"
+	"dexcelerate/internal/config"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -17,24 +18,17 @@ var (
 	ErrNoBearerToken = errors.New("authorization header must be: Bearer <token>")
 )
 
-type RS256Config struct {
-	PubKeyPath string
-	Audience   string
-	Issuer     string
-	Leeway     time.Duration // io operation delay rejection
-}
-
-// Check JWT RS256 with audience/issuer and allow for shifting hours - leeway
+// Check JWT RS256 with audience/issuer and allow for shifting hours - Leeway
 type RS256Verifier struct {
-	pubKey *rsa.PublicKey
-	aud    string
-	iss    string
-	leeway time.Duration
+	PubKey *rsa.PublicKey
+	Aud    string
+	Iss    string
+	Leeway time.Duration
 }
 
 // Load pub_key and parsing, audience/issuer can leave empty - not check
-func NewRS256Verifier(cfg RS256Config) (*RS256Verifier, error) {
-	b, err := os.ReadFile(cfg.PubKeyPath)
+func NewRS256Verifier(cfg *config.JWTConfig) (*RS256Verifier, error) {
+	b, err := os.ReadFile(cfg.PublicKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key: %w", err)
 	}
@@ -45,10 +39,10 @@ func NewRS256Verifier(cfg RS256Config) (*RS256Verifier, error) {
 	}
 
 	return &RS256Verifier{
-		pubKey: pub,
-		aud:    cfg.Audience,
-		iss:    cfg.Issuer,
-		leeway: cfg.Leeway,
+		PubKey: pub,
+		Aud:    cfg.Audience,
+		Iss:    cfg.Issuer,
+		Leeway: cfg.Leeway,
 	}, nil
 }
 
@@ -61,21 +55,21 @@ func (v *RS256Verifier) VerifyBearer(authHeader string) (any, error) {
 
 	opts := []jwt.ParserOption{
 		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}), // only RS256
-		jwt.WithLeeway(v.leeway),
+		jwt.WithLeeway(v.Leeway),
 		jwt.WithIssuedAt(),           // check iat if exists
 		jwt.WithExpirationRequired(), // check exp if exists
 	}
 
-	if v.aud != "" {
-		opts = append(opts, jwt.WithAudience(v.aud))
+	if v.Aud != "" {
+		opts = append(opts, jwt.WithAudience(v.Aud))
 	}
-	if v.iss != "" {
-		opts = append(opts, jwt.WithIssuer(v.iss))
+	if v.Iss != "" {
+		opts = append(opts, jwt.WithIssuer(v.Iss))
 	}
 
 	claims := &jwt.RegisteredClaims{}
 	if _, err = jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (any, error) {
-		return v.pubKey, nil
+		return v.PubKey, nil
 	}, opts...); err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}

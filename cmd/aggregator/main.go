@@ -10,7 +10,7 @@ import (
 func main() {
 	cfgPath := os.Getenv("CONFIG")
 	if cfgPath == "" {
-		cfgPath = "config.yaml"
+		cfgPath = "cmd/aggregator/config.yaml"
 	}
 
 	cfg, err := config.Load(cfgPath)

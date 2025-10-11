@@ -13,8 +13,8 @@ type Conn struct {
 	Native ch.Conn
 }
 
-func New(ctx context.Context, cfg config.Config) (*Conn, error) {
-	opts, err := ch.ParseDSN(cfg.Stores.ClickHouse.DSN)
+func New(ctx context.Context, cfg *config.ClickHouseConfig) (*Conn, error) {
+	opts, err := ch.ParseDSN(cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed parse DSN ch, error=%w", err)
 	}
@@ -41,7 +41,10 @@ func New(ctx context.Context, cfg config.Config) (*Conn, error) {
 		return nil, fmt.Errorf("failed Open ch, error=%w", err)
 	}
 
-	if err = conn.Ping(ctx); err != nil {
+	pingCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err = conn.Ping(pingCtx); err != nil {
 		return nil, fmt.Errorf("failed ping ch, error=%w", err)
 	}
 

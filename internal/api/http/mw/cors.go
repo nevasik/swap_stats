@@ -1,25 +1,25 @@
 package mw
 
 import (
+	"dexcelerate/internal/config"
 	"net/http"
 )
 
 type CORSMiddleware struct {
-	Enabled bool
 	Origins []string
 	Methods []string
 	Headers []string
 }
 
-func NewCORSConfig(cfg CORSMiddleware) *CORSMiddleware {
-	return &cfg
+func NewCORSConfig(cfg *config.CORSConfig) *CORSMiddleware {
+	return &CORSMiddleware{
+		Origins: cfg.Origins,
+		Methods: cfg.Methods,
+		Headers: cfg.Headers,
+	}
 }
 
 func (c *CORSMiddleware) Handler() func(http.Handler) http.Handler {
-	if c == nil || !c.Enabled {
-		return func(h http.Handler) http.Handler { return h }
-	}
-
 	origins := joinOrDefault(c.Origins, "*")
 	methods := joinOrDefault(c.Methods, "GET, POST, OPTIONS")
 	headers := joinOrDefault(c.Headers, "Authorization, Content-Type")

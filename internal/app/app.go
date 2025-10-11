@@ -18,8 +18,11 @@ type App struct {
 	httpSrv HTTPServer
 }
 
-func New(httpSrv HTTPServer, log logger.Logger) *App {
-	return &App{httpSrv: httpSrv, log: log}
+func New(log logger.Logger, httpSrv HTTPServer) *App {
+	return &App{
+		log:     log,
+		httpSrv: httpSrv,
+	}
 }
 
 func (a *App) Start() error {

@@ -2,35 +2,25 @@ package mw
 
 import (
 	"context"
+	"dexcelerate/internal/config"
 	"dexcelerate/internal/security"
+	"dexcelerate/internal/stores/redis"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/redis/go-redis/v9"
+	goredis "github.com/redis/go-redis/v9"
 )
 
-// Config for 2 bucket
-type RateBucket struct {
-	RefillPerSec int           // how many tokens are add every second
-	Burst        int           // max len bucket
-	TTL          time.Duration // how long should you keep a key if it isn't use
-}
-
-type RateLimitConfig struct {
-	ByJWT    RateBucket
-	ByIP     RateBucket
-	Verifier *security.RS256Verifier // not necessarily
-}
-
 type RateLimitMiddleware struct {
-	rdb *redis.Client
-	cfg RateLimitConfig
+	Cfg      *config.RateLimitConfig
+	Rdb      *redis.Client
+	Verifier *security.RS256Verifier
 }
 
-func NewRateLimit(rdb *redis.Client, cfg RateLimitConfig) *RateLimitMiddleware {
+func NewRateLimit(cfg *config.RateLimitConfig, rdb *redis.Client, verifier *security.RS256Verifier) *RateLimitMiddleware {
 	// sane defaults
 	if cfg.ByJWT.TTL == 0 {
 		cfg.ByJWT.TTL = 2 * time.Minute
@@ -38,7 +28,11 @@ func NewRateLimit(rdb *redis.Client, cfg RateLimitConfig) *RateLimitMiddleware {
 	if cfg.ByIP.TTL == 0 {
 		cfg.ByIP.TTL = 2 * time.Minute
 	}
-	return &RateLimitMiddleware{rdb: rdb, cfg: cfg}
+	return &RateLimitMiddleware{
+		Rdb:      rdb,
+		Cfg:      cfg,
+		Verifier: verifier,
+	}
 }
 
 func (m *RateLimitMiddleware) Handler(next http.Handler) http.Handler {
@@ -54,15 +48,15 @@ func (m *RateLimitMiddleware) Handler(next http.Handler) http.Handler {
 		}
 
 		ipKey := "rl:ip:" + ip
-		okIP, _ := m.allow(ctx, ipKey, now, m.cfg.ByIP)
+		okIP, _ := m.allow(ctx, ipKey, now, &m.Cfg.ByIP)
 
 		// by JWT if exists/valid
 		okJWT := true
 
 		sub := subjectFromContext(r)
-		if sub == "" && m.cfg.Verifier != nil {
+		if sub == "" && m.Verifier != nil {
 			// try to parse ourselves
-			if cl, err := m.cfg.Verifier.VerifyBearer(r.Header.Get("Authorization")); err == nil {
+			if cl, err := m.Verifier.VerifyBearer(r.Header.Get("Authorization")); err == nil {
 				if rc, ok := cl.(*jwt.RegisteredClaims); ok && rc.Subject != "" {
 					sub = rc.Subject
 				}
@@ -70,7 +64,7 @@ func (m *RateLimitMiddleware) Handler(next http.Handler) http.Handler {
 		}
 		if sub != "" {
 			jwtKey := "rl:jwt:" + sub
-			okJWT, _ = m.allow(ctx, jwtKey, now, m.cfg.ByJWT)
+			okJWT, _ = m.allow(ctx, jwtKey, now, &m.Cfg.ByJWT)
 		}
 
 		if !(okIP && okJWT) {
@@ -94,7 +88,7 @@ func subjectFromContext(r *http.Request) string {
 }
 
 // --- redis token-bucket (Lua) for atomic and one query ---
-var luaTokenBucket = redis.NewScript(`
+var luaTokenBucket = goredis.NewScript(`
 -- KEYS[1] = key
 -- ARGV[1] = now_ms
 -- ARGV[2] = refill_per_sec (integer)
@@ -146,13 +140,13 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-func (m *RateLimitMiddleware) allow(ctx context.Context, key string, now time.Time, b RateBucket) (bool, float64) {
+func (m *RateLimitMiddleware) allow(ctx context.Context, key string, now time.Time, b *config.RateBucket) (bool, float64) {
 	ttl := int(b.TTL.Seconds())
 	if ttl <= 0 {
 		ttl = 120
 	}
 
-	res, err := luaTokenBucket.Run(ctx, m.rdb, []string{key},
+	res, err := luaTokenBucket.Run(ctx, m.Rdb, []string{key},
 		now.UnixMilli(),
 		b.RefillPerSec,
 		b.Burst,
