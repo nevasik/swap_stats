@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"dexcelerate/internal/pubsub/nats"
+	"dexcelerate/internal/security"
 	"dexcelerate/internal/stores/clickhouse"
 	"dexcelerate/internal/stores/redis"
 	"dexcelerate/pkg/httputil"
@@ -23,6 +24,10 @@ type Deps struct {
 	ClickHouseBatch *clickhouse.Writer // batcher to ClickHouse(main entry)
 	NATS            *nats.Client       // cluster fan-out
 	// ---- external services/clients ----
+
+	// ---- security ----
+	Signer *security.RS256Signer // JWT token signer (only for dev/testing)
+	// ---- security ----
 
 	// ---- internal service ----
 	//Windows *window.Engine // hot window 5m/1h/24h for HTTP and WS

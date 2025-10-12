@@ -127,6 +127,7 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		ClickHouse:      ch,
 		ClickHouseBatch: chWriter,
 		NATS:            natsCl,
+		Signer:          signer, // maybe nil if jwt.enabled=false
 	})
 	if api == nil {
 		return nil, nil, errors.New("api struct from NewAPI is nil")

@@ -38,6 +38,9 @@ func BuildRouter(
 	r.Get("/readiness", api.Readiness)
 	r.Mount("/metrics", metrics.Handler())
 
+	// auth (dev/testing only)
+	r.Post("/auth/mint-token", api.MintToken)
+
 	// protected (JWT + RL)
 	r.Group(func(protected chi.Router) {
 		if rateLimitMW != nil {

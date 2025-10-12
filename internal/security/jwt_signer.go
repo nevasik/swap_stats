@@ -64,9 +64,9 @@ func (s *RS256Signer) Mint(sub string, ttl time.Duration, id string, notBefore t
 
 	// copy registered claims
 	for k, v := range map[string]any{
-		"Iss": claims.Issuer,
+		"iss": claims.Issuer,
 		"sub": claims.Subject,
-		"Aud": claims.Audience,
+		"aud": claims.Audience,
 		"exp": claims.ExpiresAt.Unix(),
 		"iat": claims.IssuedAt.Unix(),
 		"nbf": claims.NotBefore.Unix(),
