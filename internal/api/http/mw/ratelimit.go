@@ -191,13 +191,21 @@ func (m *RateLimitMiddleware) allow(ctx context.Context, key string, now time.Ti
 	}
 
 	arr := res.([]any)
-	if len(arr) == 0 {
-		return false, 0
+
+	allowed := false
+	if v, ok := arr[0].(int64); ok && v == 1 {
+		allowed = true
 	}
 
-	allowed := arr[0].(int64) == 1
-	tokenLeft, _ := arr[1].(float64)
-
+	var tokenLeft float64
+	switch v := arr[1].(type) {
+	case float64:
+		tokenLeft = v
+	case int64:
+		tokenLeft = float64(v)
+	default:
+		tokenLeft = 0
+	}
 	return allowed, tokenLeft
 }
 

@@ -22,12 +22,21 @@ func NewGzip(level int) *GzipMiddleware {
 func (m *GzipMiddleware) Handler(next http.Handler) http.Handler {
 	var pool = sync.Pool{
 		New: func() any {
-			w, _ := gzip.NewWriterLevel(io.Discard, m.Level)
+			w, err := gzip.NewWriterLevel(io.Discard, m.Level)
+			if err != nil {
+				w, err = gzip.NewWriterLevel(io.Discard, gzip.DefaultCompression)
+			}
 			return w
 		},
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Пропускаем сжатие для /metrics
+		if r.URL.Path == "/metrics" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		// client not support gzip
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
@@ -49,9 +58,13 @@ func (m *GzipMiddleware) Handler(next http.Handler) http.Handler {
 		defer pool.Put(gzw)
 
 		gzw.Reset(w)
-		defer func(gzw *gzip.Writer) {
-			_ = gzw.Close()
-		}(gzw)
+		defer gzw.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
+
+		grw := &gzipResponseWriter{ResponseWriter: w, Writer: gzw}
+		next.ServeHTTP(grw, r)
 	})
 }
 

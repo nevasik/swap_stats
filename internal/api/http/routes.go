@@ -23,12 +23,14 @@ func BuildRouter(
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RealIP)
 
-	if logMW != nil {
-		r.Use(logMW.Handler)
-	}
 	if gzipMW != nil {
 		r.Use(gzipMW.Handler)
 	}
+
+	if logMW != nil {
+		r.Use(logMW.Handler)
+	}
+
 	if corsMW != nil {
 		r.Use(corsMW.Handler())
 	}

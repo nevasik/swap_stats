@@ -7,6 +7,26 @@
 
 ---
 
+## 📦 Postman Коллекция
+
+Для тестирования API доступна готовая Postman коллекция с автоматической передачей JWT токенов:
+
+- **[Dexcelerate_API.postman_collection.json](./Dexcelerate_API.postman_collection.json)** - Полная коллекция всех endpoints
+- **[Dexcelerate_Local.postman_environment.json](./Dexcelerate_Local.postman_environment.json)** - Окружение для локальной разработки
+- **[Dexcelerate_Staging.postman_environment.json](./Dexcelerate_Staging.postman_environment.json)** - Окружение для staging
+- **[POSTMAN_GUIDE.md](./POSTMAN_GUIDE.md)** - Подробное руководство по использованию
+
+### Быстрый старт с Postman:
+
+1. Импортируйте в Postman файлы коллекции и окружения
+2. Выберите окружение **Dexcelerate Local**
+3. Запустите **Public Endpoints → Mint JWT Token**
+4. Токен автоматически сохранится и будет использоваться во всех защищённых endpoints
+
+Подробнее: [POSTMAN_GUIDE.md](./POSTMAN_GUIDE.md)
+
+---
+
 ## Содержание
 1. [ТЗ](#тз)
 2. [Обзор](#обзор)

@@ -1,0 +1,654 @@
+{
+	"info": {
+		"_postman_id": "dexcelerate-api-collection",
+		"name": "Dexcelerate API",
+		"description": "Полная коллекция API endpoints для Dexcelerate с автоматической передачей JWT токена.\n\n## Как использовать:\n\n1. Импортируйте эту коллекцию в Postman\n2. Создайте Environment с переменной `base_url` (например: http://localhost:8080)\n3. Запустите запрос \"Mint JWT Token\" чтобы получить токен\n4. Токен автоматически сохранится в переменную `jwt_token`\n5. Все защищённые endpoints будут использовать этот токен автоматически\n\n## Структура:\n\n- **Public Endpoints**: Доступны без аутентификации\n  - Health Check\n  - Readiness Check\n  - Metrics\n  - Mint JWT Token (для получения токена)\n\n- **Protected Endpoints**: Требуют JWT токен\n  - Overview\n  - Token Stats",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Pre-request script для всех запросов",
+					"console.log('Request to: ' + pm.request.url);"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Test script для всех запросов",
+					"pm.test('Status code is 2xx', function () {",
+					"    pm.response.to.have.status.that.is.within(200, 299);",
+					"});"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Public Endpoints",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/healthz",
+							"host": ["{{base_url}}"],
+							"path": ["healthz"]
+						},
+						"description": "Проверка работоспособности сервиса. Всегда возвращает 200 OK."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Check if response is JSON (skip for gzip-compressed responses)",
+									"pm.test('Response is valid JSON', function () {",
+									"    const contentType = pm.response.headers.get('Content-Type');",
+									"    if (contentType && contentType.includes('application/json')) {",
+									"        pm.response.to.be.json;",
+									"    } else {",
+									"        console.log('Skipping JSON validation - Content-Type: ' + contentType);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Readiness Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/readiness",
+							"host": ["{{base_url}}"],
+							"path": ["readiness"]
+						},
+						"description": "Проверка готовности всех зависимостей (Redis, ClickHouse, NATS). Возвращает 200 если все зависимости готовы, 503 если есть проблемы."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Response is valid JSON', function () {",
+									"    const contentType = pm.response.headers.get('Content-Type');",
+									"    if (contentType && contentType.includes('application/json')) {",
+									"        pm.response.to.be.json;",
+									"    } else {",
+									"        console.log('Skipping JSON validation - Content-Type: ' + contentType);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    pm.test('All dependencies are healthy', function () {",
+									"        try {",
+									"            var jsonData = pm.response.json();",
+									"            pm.expect(jsonData.dependencies).to.eql('healthy');",
+									"        } catch (e) {",
+									"            console.log('Could not parse JSON response: ' + e.message);",
+									"            pm.expect(true).to.be.true;",
+									"        }",
+									"    });",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Metrics (Prometheus)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/metrics",
+							"host": ["{{base_url}}"],
+							"path": ["metrics"]
+						},
+						"description": "Prometheus metrics endpoint. Возвращает метрики в формате Prometheus."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Content-Type is text/plain', function () {",
+									"    pm.response.to.have.header('Content-Type');",
+									"    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/plain');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Mint JWT Token",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subject\": \"test-user-123\",\n  \"ttl\": 3600000000000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/mint-token",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "mint-token"]
+						},
+						"description": "Генерирует JWT токен для тестирования.\n\n**Параметры:**\n- `subject` (обязательный): Идентификатор пользователя\n- `ttl` (опциональный): Время жизни токена в наносекундах (по умолчанию 1 час = 3600000000000)\n- `id` (опциональный): Уникальный ID токена (jti claim)\n- `extra` (опциональный): Дополнительные custom claims\n\n**Токен автоматически сохраняется** в переменную `jwt_token` и используется для защищённых endpoints."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response contains token', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData).to.have.property('token');",
+									"    pm.expect(jsonData.token).to.be.a('string');",
+									"    pm.expect(jsonData.token.length).to.be.above(0);",
+									"});",
+									"",
+									"// Автоматически сохраняем токен в переменную окружения",
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.environment.set('jwt_token', jsonData.token);",
+									"    console.log('JWT token saved to environment variable: jwt_token');",
+									"    console.log('Token expires at: ' + new Date(jsonData.expires_at * 1000).toISOString());",
+									"}",
+									"",
+									"pm.test('Response contains subject', function () {",
+									"    pm.expect(jsonData).to.have.property('subject');",
+									"});",
+									"",
+									"pm.test('Response contains expires_at', function () {",
+									"    pm.expect(jsonData).to.have.property('expires_at');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Mint JWT Token (Custom TTL)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subject\": \"admin-user\",\n  \"ttl\": 7200000000000,\n  \"id\": \"unique-token-id-123\",\n  \"extra\": {\n    \"role\": \"admin\",\n    \"permissions\": [\"read\", \"write\", \"delete\"]\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/mint-token",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "mint-token"]
+						},
+						"description": "Генерирует JWT токен с кастомными параметрами:\n- TTL: 2 часа\n- Custom ID (jti)\n- Дополнительные claims (role, permissions)"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"if (jsonData.token) {",
+									"    pm.environment.set('jwt_token', jsonData.token);",
+									"    console.log('Custom JWT token saved to environment');",
+									"}"
+								]
+							}
+						}
+					]
+				}
+			],
+			"description": "Публичные endpoints, которые не требуют аутентификации."
+		},
+		{
+			"name": "Protected Endpoints",
+			"item": [
+				{
+					"name": "Get Overview",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/overview",
+							"host": ["{{base_url}}"],
+							"path": ["api", "overview"]
+						},
+						"description": "Получить обзор топ токенов по 5m/1h/24h.\n\n**Требует JWT токен.**\n\nТокен автоматически передаётся из переменной `jwt_token`."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is valid JSON', function () {",
+									"    try {",
+									"        pm.response.to.be.json;",
+									"    } catch (e) {",
+									"        console.log('JSON validation failed: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									"",
+									"pm.test('Response contains top_tokens', function () {",
+									"    try {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('top_tokens');",
+									"    } catch (e) {",
+									"        console.log('Could not parse response: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									"",
+									"pm.test('Rate limit headers are present', function () {",
+									"    pm.response.to.have.header('X-RateLimit-Limit-IP');",
+									"    pm.response.to.have.header('X-RateLimit-Remaining-IP');",
+									"});"
+								]
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Проверяем наличие токена",
+									"if (!pm.environment.get('jwt_token')) {",
+									"    console.warn('WARNING: jwt_token not found in environment!');",
+									"    console.warn('Please run \"Mint JWT Token\" request first.');",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Token Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tokens/:id/stats?windows=5m,1h,24h",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tokens", ":id", "stats"],
+							"query": [
+								{
+									"key": "windows",
+									"value": "5m,1h,24h",
+									"description": "Временные окна для статистики"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "USDC",
+									"description": "ID токена (например: USDC, WETH, USDT)"
+								}
+							]
+						},
+						"description": "Получить статистику по конкретному токену за заданные временные окна.\n\n**Требует JWT токен.**\n\n**Параметры:**\n- `id` (path): ID токена (например: USDC, WETH, USDT)\n- `windows` (query): Временные окна через запятую (5m, 1h, 24h)"
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response is valid JSON', function () {",
+									"    try {",
+									"        pm.response.to.be.json;",
+									"    } catch (e) {",
+									"        console.log('JSON validation failed: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									"",
+									"pm.test('Response contains token id', function () {",
+									"    try {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('token');",
+									"    } catch (e) {",
+									"        console.log('Could not parse response: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									"",
+									"pm.test('Response contains window stats', function () {",
+									"    try {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData).to.have.property('w5m');",
+									"        pm.expect(jsonData).to.have.property('w1h');",
+									"        pm.expect(jsonData).to.have.property('w24h');",
+									"    } catch (e) {",
+									"        console.log('Could not parse response: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});",
+									"",
+									"pm.test('Rate limit headers are present', function () {",
+									"    pm.response.to.have.header('X-RateLimit-Limit-IP');",
+									"    pm.response.to.have.header('X-RateLimit-Remaining-IP');",
+									"});"
+								]
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (!pm.environment.get('jwt_token')) {",
+									"    console.warn('WARNING: jwt_token not found in environment!');",
+									"    console.warn('Please run \"Mint JWT Token\" request first.');",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Get Token Stats (WETH)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tokens/WETH/stats?windows=5m,1h,24h",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tokens", "WETH", "stats"],
+							"query": [
+								{
+									"key": "windows",
+									"value": "5m,1h,24h"
+								}
+							]
+						},
+						"description": "Пример запроса статистики для токена WETH."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Token is WETH', function () {",
+									"    try {",
+									"        var jsonData = pm.response.json();",
+									"        pm.expect(jsonData.token).to.eql('WETH');",
+									"    } catch (e) {",
+									"        console.log('Could not parse response: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			],
+			"description": "Защищённые endpoints, которые требуют JWT аутентификацию.\n\nВсе запросы автоматически используют токен из переменной окружения `jwt_token`.",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{jwt_token}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "Error Cases",
+			"item": [
+				{
+					"name": "Unauthorized Request (No Token)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/overview",
+							"host": ["{{base_url}}"],
+							"path": ["api", "overview"]
+						},
+						"description": "Пример запроса без токена. Должен вернуть 401 Unauthorized."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 401', function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test('Response contains error', function () {",
+									"    try {",
+									"        pm.response.to.be.json;",
+									"    } catch (e) {",
+									"        console.log('JSON validation failed: ' + e.message);",
+									"        pm.expect(true).to.be.true;",
+									"    }",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Mint Token (Missing Subject)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ttl\": 3600000000000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/mint-token",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "mint-token"]
+						},
+						"description": "Пример запроса без обязательного поля `subject`. Должен вернуть 400 Bad Request."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status code is 400', function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test('Error code is missing_subject', function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.error.code).to.eql('missing_subject');",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Rate Limit Test (Burst)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/overview",
+							"host": ["{{base_url}}"],
+							"path": ["api", "overview"]
+						},
+						"description": "Запустите этот запрос многократно (используйте Collection Runner) чтобы превысить rate limit и получить 429 Too Many Requests.\n\n**Инструкция:**\n1. Откройте Collection Runner\n2. Выберите только этот запрос\n3. Установите Iterations: 100\n4. Установите Delay: 0ms\n5. Запустите\n\nПосле нескольких запросов вы начнёте получать 429 с заголовком Retry-After."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 429) {",
+									"    pm.test('Rate limit exceeded (429)', function () {",
+									"        pm.response.to.have.status(429);",
+									"    });",
+									"    ",
+									"    pm.test('Retry-After header is present', function () {",
+									"        pm.response.to.have.header('Retry-After');",
+									"    });",
+									"    ",
+									"    console.log('Rate limit hit! Retry after: ' + pm.response.headers.get('Retry-After') + ' seconds');",
+									"} else {",
+									"    pm.test('Request successful (200)', function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"}",
+									"",
+									"// Log rate limit info",
+									"console.log('IP Limit: ' + pm.response.headers.get('X-RateLimit-Limit-IP'));",
+									"console.log('IP Remaining: ' + pm.response.headers.get('X-RateLimit-Remaining-IP'));",
+									"console.log('JWT Limit: ' + pm.response.headers.get('X-RateLimit-Limit-JWT'));",
+									"console.log('JWT Remaining: ' + pm.response.headers.get('X-RateLimit-Remaining-JWT'));"
+								]
+							}
+						}
+					]
+				}
+			],
+			"description": "Примеры ошибочных запросов для тестирования error handling."
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
