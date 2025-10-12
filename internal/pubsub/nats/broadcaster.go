@@ -38,6 +38,8 @@ func New(log logger.Logger, cfg *config.NATSConfig) (*Client, error) {
 		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
+	log.Infof("Connected to NATS successfully, url=%s", url)
+
 	return &Client{
 		nc:  nc,
 		log: log,

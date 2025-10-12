@@ -28,7 +28,6 @@ func NewRateLimit(cfg *config.RateLimitConfig, rdb *redis.Client, verifier *secu
 	if rdb == nil {
 		panic("redis client cannot be nil")
 	}
-	// verifier может быть nil если JWT.Enabled=false
 
 	// sane defaults
 	if cfg.ByJWT.TTL == 0 {

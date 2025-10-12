@@ -522,10 +522,11 @@ func TestRS256Verifier_EdgeCases(t *testing.T) {
 	})
 
 	t.Run("different signing method", func(t *testing.T) {
-		verifier, err := NewRS256Verifier(&RS256Config{
-			PubKeyPath: testPublicKeyPath,
-			Audience:   "",
-			Issuer:     "",
+		verifier, err := NewRS256Verifier(&config.JWTConfig{
+			Enabled:       true,
+			PublicKeyPath: testPublicKeyPath,
+			Audience:      "",
+			Issuer:        "",
 		})
 		require.NoError(t, err)
 

@@ -81,21 +81,18 @@ func (m *MockLogger) Errorf(format string, args ...interface{}) {
 func TestConnect_NilConfig(t *testing.T) {
 	mockLogger := new(MockLogger)
 
-	client, err := New(nil, mockLogger)
+	client, err := New(mockLogger, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, client)
-	assert.Equal(t, "config is required", err.Error())
+	assert.Equal(t, "nats config is required", err.Error())
 	mockLogger.AssertNotCalled(t, "Infof", mock.Anything, mock.Anything)
 }
 
 func TestConnect_EmptyURL(t *testing.T) {
 	mockLogger := new(MockLogger)
 
-	cfg := &config.Config{}
-	cfg.PubSub.NATS.URL = ""
-
-	client, err := New(cfg, mockLogger)
+	client, err := New(mockLogger, &config.NATSConfig{URL: ""})
 
 	assert.Error(t, err)
 	assert.Nil(t, client)
@@ -163,10 +160,7 @@ func TestConnect_Success(t *testing.T) {
 		mockLogger := new(MockLogger)
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{URL: url})
 
 		require.NoError(t, err)
 		require.NotNil(t, client)
@@ -187,11 +181,10 @@ func TestConnect_WithBroadcastPrefix(t *testing.T) {
 		mockLogger := new(MockLogger)
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-		cfg.PubSub.NATS.BroadcastPrefix = "broadcast.test"
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{
+			URL:             url,
+			BroadcastPrefix: "broadcast.test",
+		})
 
 		require.NoError(t, err)
 		require.NotNil(t, client)
@@ -211,10 +204,7 @@ func TestClose_Success(t *testing.T) {
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 		mockLogger.On("Infof", "NATS connection closed gracefully", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{URL: url})
 		require.NoError(t, err)
 
 		err = client.Close()
@@ -233,10 +223,7 @@ func TestReady_States(t *testing.T) {
 		mockLogger := new(MockLogger)
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{URL: url})
 		require.NoError(t, err)
 
 		// check what conn ready
@@ -256,10 +243,7 @@ func TestStatus_VariousStates(t *testing.T) {
 		mockLogger := new(MockLogger)
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{URL: url})
 		require.NoError(t, err)
 
 		assert.Equal(t, nats.CONNECTED, client.Status())
@@ -277,10 +261,7 @@ func TestClose_Idempotent(t *testing.T) {
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 		mockLogger.On("Infof", "NATS connection closed gracefully", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{URL: url})
 		require.NoError(t, err)
 
 		err = client.Close()
@@ -292,7 +273,7 @@ func TestClose_Idempotent(t *testing.T) {
 		err = client.Close()
 		assert.NoError(t, err)
 
-		mockLogger.AssertNumberOfCalls(t, "Infof", 2) // connect + close
+		mockLogger.AssertNumberOfCalls(t, "Infof", 2) // connect + close (1 Infof by conn + 1 Infof by close)
 	})
 }
 
@@ -301,10 +282,7 @@ func TestReconnectBehavior(t *testing.T) {
 		mockLogger := new(MockLogger)
 		mockLogger.On("Infof", "Connected to NATS successfully, url=%s", mock.Anything).Once()
 
-		cfg := &config.Config{}
-		cfg.PubSub.NATS.URL = url
-
-		client, err := New(cfg, mockLogger)
+		client, err := New(mockLogger, &config.NATSConfig{URL: url})
 		require.NoError(t, err)
 
 		assert.True(t, client.Ready())
