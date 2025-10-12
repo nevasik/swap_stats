@@ -14,7 +14,7 @@ import (
 	"gitlab.com/nevasik7/alerting/logger"
 )
 
-// MockLogger implements logger.Logger for tests
+// Implements logger.Logger for tests
 type MockLogger struct {
 	mock.Mock
 }
