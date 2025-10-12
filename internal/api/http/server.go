@@ -30,6 +30,9 @@ type Server struct {
 }
 
 func NewServer(d ServerDeps) *Server {
+	if d.API == nil {
+		panic("API handlers cannot be nil")
+	}
 	router := BuildRouter(d.API, d.Logging, d.Gzip, d.RateLimit, d.JWT, d.CORS)
 
 	s := &http.Server{

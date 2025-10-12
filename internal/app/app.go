@@ -19,6 +19,12 @@ type App struct {
 }
 
 func New(log logger.Logger, httpSrv HTTPServer) *App {
+	if log == nil {
+		panic("logger cannot be nil")
+	}
+	if httpSrv == nil {
+		panic("HTTP server cannot be nil")
+	}
 	return &App{
 		log:     log,
 		httpSrv: httpSrv,

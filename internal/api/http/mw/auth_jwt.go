@@ -16,6 +16,9 @@ type JWTMiddleware struct {
 }
 
 func NewJWTMiddleware(v *security.RS256Verifier) *JWTMiddleware {
+	if v == nil {
+		panic("JWT verifier cannot be nil")
+	}
 	return &JWTMiddleware{verifier: v}
 }
 
@@ -32,12 +35,12 @@ func (m *JWTMiddleware) Handler(next http.Handler) http.Handler {
 		}
 
 		rc, ok := claimsAny.(*jwt.RegisteredClaims)
-		if !ok || rc == nil {
+		if !ok {
 			http.Error(w, "invalid token claims", http.StatusUnauthorized)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), claimsCtxKey{}, rc)
+		ctx := context.WithValue(r.Context(), claimsCtxKey{}, rc.Subject)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

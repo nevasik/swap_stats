@@ -10,7 +10,7 @@ import (
 )
 
 type Client struct {
-	lg logger.Logger
+	Log logger.Logger
 	*goredis.Client
 }
 
@@ -29,5 +29,5 @@ func New(ctx context.Context, lg logger.Logger, cfg *config.RedisConfig) (*Clien
 		return nil, fmt.Errorf("failed to ping redis: %w", err)
 	}
 
-	return &Client{Client: rdb}, nil
+	return &Client{Log: lg, Client: rdb}, nil
 }

@@ -38,6 +38,16 @@ type Writer struct {
 }
 
 func NewWriter(log logger.Logger, conn *Conn, cfg *config.ClickHouseConfig) *Writer {
+	if log == nil {
+		panic("logger cannot be nil")
+	}
+	if conn == nil {
+		panic("clickhouse writer connection cannot be nil")
+	}
+	if cfg == nil {
+		panic("clickhouse writer config cannot be nil")
+	}
+
 	// sane defaults
 	if cfg.Writer.BatchMaxRows <= 0 {
 		cfg.Writer.BatchMaxRows = 1000
@@ -84,8 +94,8 @@ func (w *Writer) Enqueue(row RawSwapRow) error {
 func (w *Writer) Close(ctx context.Context) error {
 	w.closeOnce.Do(func() {
 		close(w.closedCh)
+		close(w.inCh)
 	})
-	close(w.inCh)
 
 	done := make(chan struct{})
 	go func() {
@@ -113,8 +123,16 @@ func (w *Writer) loop() {
 			return
 		}
 
-		if err := w.insertBatch(context.Background(), batch); err != nil {
-			// TODO прокинуть метрики
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := w.insertBatch(ctx, batch); err != nil {
+			/* TODO прокинуть метрики
+			- size batch
+			- latency inserts
+			- size retry
+			- size len(w.inCh)
+			*/
 			w.Log.Errorf("Failed insert [%d] rows by batch to clickhouse, error=%v", len(batch), err)
 		}
 		batch = batch[:0]
@@ -135,6 +153,8 @@ func (w *Writer) loop() {
 		case <-ticker.C:
 			flush()
 		case <-w.closedCh:
+			flush()
+			return
 		}
 	}
 }

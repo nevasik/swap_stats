@@ -12,6 +12,9 @@ type LoggingMiddleware struct {
 }
 
 func NewLogging(logger logger.Logger) *LoggingMiddleware {
+	if logger == nil {
+		panic("logger cannot be nil")
+	}
 	return &LoggingMiddleware{Logger: logger}
 }
 

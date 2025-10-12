@@ -52,8 +52,9 @@ type JWTConfig struct {
 }
 
 type RateLimitConfig struct {
-	ByJWT RateBucket `yaml:"by_jwt"`
-	ByIP  RateBucket `yaml:"by_ip"`
+	ByJWT              RateBucket `yaml:"by_jwt"`
+	ByIP               RateBucket `yaml:"by_ip"`
+	TrustedProxiesList []string   `yaml:"trusted_proxies_list"`
 }
 
 type RateBucket struct {

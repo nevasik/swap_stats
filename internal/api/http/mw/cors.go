@@ -12,6 +12,9 @@ type CORSMiddleware struct {
 }
 
 func NewCORSConfig(cfg *config.CORSConfig) *CORSMiddleware {
+	if cfg == nil {
+		panic("CORS config cannot be nil")
+	}
 	return &CORSMiddleware{
 		Origins: cfg.Origins,
 		Methods: cfg.Methods,

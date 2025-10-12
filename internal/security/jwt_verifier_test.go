@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"dexcelerate/internal/config"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -117,11 +118,12 @@ func TestNewRS256Verifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			verifier, err := NewRS256Verifier(&RS256Config{
-				PubKeyPath: tt.pubKeyPath,
-				Audience:   tt.audience,
-				Issuer:     tt.issuer,
-				Leeway:     time.Second * 30,
+			verifier, err := NewRS256Verifier(&config.JWTConfig{
+				Enabled:       true,
+				PublicKeyPath: tt.pubKeyPath,
+				Audience:      tt.audience,
+				Issuer:        tt.issuer,
+				Leeway:        time.Second * 30,
 			})
 
 			if tt.wantErr {
@@ -142,11 +144,12 @@ func TestNewRS256Verifier(t *testing.T) {
 }
 
 func TestVerifyBearer_Success(t *testing.T) {
-	verifier, err := NewRS256Verifier(&RS256Config{
-		PubKeyPath: testPublicKeyPath,
-		Audience:   "test-Aud",
-		Issuer:     "test-Iss",
-		Leeway:     time.Second * 30,
+	verifier, err := NewRS256Verifier(&config.JWTConfig{
+		Enabled:       true,
+		PublicKeyPath: testPublicKeyPath,
+		Audience:      "test-Aud",
+		Issuer:        "test-Iss",
+		Leeway:        time.Second * 30,
 	})
 
 	require.NoError(t, err)
@@ -175,11 +178,12 @@ func TestVerifyBearer_Success(t *testing.T) {
 }
 
 func TestVerifyBearer_InvalidTokens(t *testing.T) {
-	verifier, err := NewRS256Verifier(&RS256Config{
-		PubKeyPath: testPublicKeyPath,
-		Audience:   "test-Aud",
-		Issuer:     "test-Iss",
-		Leeway:     time.Second * 30,
+	verifier, err := NewRS256Verifier(&config.JWTConfig{
+		Enabled:       true,
+		PublicKeyPath: testPublicKeyPath,
+		Audience:      "test-Aud",
+		Issuer:        "test-Iss",
+		Leeway:        time.Second * 30,
 	})
 	require.NoError(t, err)
 
@@ -285,11 +289,12 @@ func TestVerifyBearer_InvalidTokens(t *testing.T) {
 }
 
 func TestVerifyBearer_Leeway(t *testing.T) {
-	verifier, err := NewRS256Verifier(&RS256Config{
-		PubKeyPath: testPublicKeyPath,
-		Audience:   "",
-		Issuer:     "",
-		Leeway:     time.Second * 30,
+	verifier, err := NewRS256Verifier(&config.JWTConfig{
+		Enabled:       true,
+		PublicKeyPath: testPublicKeyPath,
+		Audience:      "",
+		Issuer:        "",
+		Leeway:        time.Second * 30,
 	})
 	require.NoError(t, err)
 
@@ -314,10 +319,11 @@ func TestVerifyBearer_Leeway(t *testing.T) {
 
 func TestVerifyBearer_WithoutAudienceIssuer(t *testing.T) {
 	// verifier without audience/issuer checks.
-	verifier, err := NewRS256Verifier(&RS256Config{
-		PubKeyPath: testPublicKeyPath,
-		Audience:   "",
-		Issuer:     "",
+	verifier, err := NewRS256Verifier(&config.JWTConfig{
+		Enabled:       true,
+		PublicKeyPath: testPublicKeyPath,
+		Audience:      "",
+		Issuer:        "",
 	})
 	require.NoError(t, err)
 
@@ -499,10 +505,11 @@ func TestParseRSAPublicKeyFromPem(t *testing.T) {
 
 func TestRS256Verifier_EdgeCases(t *testing.T) {
 	t.Run("nil claims after verification", func(t *testing.T) {
-		verifier, err := NewRS256Verifier(&RS256Config{
-			PubKeyPath: testPublicKeyPath,
-			Audience:   "",
-			Issuer:     "",
+		verifier, err := NewRS256Verifier(&config.JWTConfig{
+			Enabled:       true,
+			PublicKeyPath: testPublicKeyPath,
+			Audience:      "",
+			Issuer:        "",
 		})
 		require.NoError(t, err)
 

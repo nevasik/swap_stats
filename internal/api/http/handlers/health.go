@@ -7,7 +7,6 @@ import (
 	"dexcelerate/internal/stores/redis"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -38,6 +37,12 @@ type API struct {
 }
 
 func NewAPI(d *Deps) *API {
+	if d == nil {
+		panic("API dependencies cannot be nil")
+	}
+	if d.Log == nil {
+		panic("logger in dependencies cannot be nil")
+	}
 	return &API{dependency: d}
 }
 
@@ -47,7 +52,7 @@ func (a *API) Healthz(w http.ResponseWriter, _ *http.Request) {
 		"data":   map[string]any{},
 	}
 
-	_ = writeResponseJson(w, http.StatusOK, resp)
+	a.writeResponseJson(w, http.StatusOK, resp)
 }
 
 // Check health external services/clients
@@ -71,7 +76,7 @@ func (a *API) Readiness(w http.ResponseWriter, _ *http.Request) {
 		}
 	}
 
-	_ = writeResponseJson(w, http.StatusOK, resp)
+	a.writeResponseJson(w, http.StatusOK, resp)
 }
 
 func (a *API) checkDependencies(ctx context.Context) error {
@@ -133,16 +138,16 @@ func (a *API) checkClickHouseBatch(_ context.Context) error {
 	return nil
 }
 
-func writeResponseJson(w http.ResponseWriter, statusCode int, data any) error {
+func (a *API) writeResponseJson(w http.ResponseWriter, statusCode int, data any) {
 	buf, err := json.Marshal(data)
+
+	if _, err = w.Write(buf); err != nil {
+		http.Error(w, "marshal error", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(statusCode)
 
-	log.Printf("Health response: %s", string(buf))
-
-	if _, err = w.Write(buf); err != nil {
-		return fmt.Errorf("could not write response: %v", err)
-	}
-	return nil
+	a.dependency.Log.Infof("Successfully write response: %v", data)
 }

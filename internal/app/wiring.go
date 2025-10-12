@@ -12,6 +12,7 @@ import (
 	"dexcelerate/internal/stores/clickhouse"
 	"dexcelerate/internal/stores/redis"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -42,6 +43,13 @@ func (c *Container) Start() error {
 }
 
 func (c *Container) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := c.app.Shutdown(ctx); err != nil {
+		return fmt.Errorf("app shutdown is failed, error=%w", err)
+	}
+
 	if c.cleanupF != nil {
 		c.cleanupF()
 	}
@@ -58,21 +66,19 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 	rdb, err := redis.New(ctx, lg, &cfg.Stores.Redis)
 	if err != nil || rdb == nil {
 		lg.Panicf("Failed to initialize redis client: %v", err)
-		return nil, nil, err
 	}
 
 	ch, err := clickhouse.New(ctx, &cfg.Stores.ClickHouse)
 	if err != nil {
 		lg.Panicf("Failed to initialize clickhouse client: %v", err)
-		return nil, nil, err
 	}
+
 	url := strings.Split(cfg.Stores.ClickHouse.DSN, "?")
 	lg.Infof("Successfully initialized clickhouse client, url=%s", url[0])
 
 	chWriter := clickhouse.NewWriter(lg, ch, &cfg.Stores.ClickHouse)
 	if chWriter == nil {
 		lg.Panicf("Failed to initialize clickhouse writer")
-		return nil, nil, errors.New("clickhouse writer is nil")
 	}
 	lg.Info("Successfully initialized clickhouse writer")
 
@@ -93,6 +99,7 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		}
 		if signer, err = security.NewRS256Signer(cfgJWT); err != nil || signer == nil {
 			lg.Errorf("Failed to initialize signer: %v", err)
+			// signer is not required for us -> continue
 		}
 	}
 	lg.Info("Successfully initialized JWT-Verifier")
@@ -165,9 +172,15 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		if err = httpSrv.Shutdown(ctxClean); err != nil {
 			lg.Errorf("Failed to shutdown by cleanupF HTTP server: %v", err)
 		}
+
 		if err = ch.Close(); err != nil {
 			lg.Errorf("Failed to close by cleanupF clickhouse client: %v", err)
 		}
+
+		if err = chWriter.Close(ctxClean); err != nil {
+			lg.Errorf("Failed to close by cleanupF clickhouse writer: %v", err)
+		}
+
 		if err = rdb.Close(); err != nil {
 			lg.Errorf("Failed to close by cleanupF redis client: %v", err)
 		}

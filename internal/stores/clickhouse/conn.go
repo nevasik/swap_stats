@@ -14,6 +14,9 @@ type Conn struct {
 }
 
 func New(ctx context.Context, cfg *config.ClickHouseConfig) (*Conn, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("clickhouse config cannot be nil")
+	}
 	opts, err := ch.ParseDSN(cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed parse DSN ch, error=%w", err)

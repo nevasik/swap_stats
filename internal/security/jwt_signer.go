@@ -24,13 +24,12 @@ type RS256Signer struct {
 
 // Load a PEM-encoded RSA private key PKCS1 or PKCS8
 func NewRS256Signer(cfg *config.JWTConfig) (*RS256Signer, error) {
-	if cfg.PrivateKeyPath == "" {
-		return nil, errors.New("private key path is empty")
+	if cfg == nil {
+		return nil, fmt.Errorf("JWT config cannot be nil")
 	}
-
 	b, err := os.ReadFile(cfg.PrivateKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("read private key: %w", err)
+		return nil, fmt.Errorf("read private key%s is error=%w", cfg.PrivateKeyPath, err)
 	}
 
 	priv, err := parseRSAPrivateKeyFromPem(b)
