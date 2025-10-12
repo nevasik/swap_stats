@@ -76,7 +76,11 @@ func NewWriter(log logger.Logger, conn *Conn, cfg *config.ClickHouseConfig) *Wri
 	return w
 }
 
-func (w *Writer) Enqueue(row RawSwapRow) error {
+func (w *Writer) Enqueue(row *RawSwapRow) error {
+	if row == nil {
+		return errors.New("row cannot be nil")
+	}
+
 	select {
 	case <-w.closedCh:
 		return errors.New("clickhouse writer closed")
@@ -84,7 +88,7 @@ func (w *Writer) Enqueue(row RawSwapRow) error {
 	}
 
 	select {
-	case w.inCh <- row:
+	case w.inCh <- *row:
 		return nil
 	case <-w.closedCh:
 		return errors.New("clickhouse writer closed")

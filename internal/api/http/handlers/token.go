@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"encoding/json"
+	"dexcelerate/pkg/httputil"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -10,27 +10,28 @@ import (
 func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 	// TODO not ready
 	resp := map[string]any{
-		"status": "ok",
-		"data": map[string]any{
-			"top_tokens": []string{"USDC", "ETH", "WBTC"},
-		},
+		"top_tokens": []any{},
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+	if err := httputil.JSON(w, http.StatusOK, resp, nil); err != nil {
+		a.dependency.Log.Errorf("Overview tokens handler error: %s", err.Error())
+	}
+
+	a.dependency.Log.Infof("Overview tokens handler success")
 }
 
 func (a *API) TokenStats(w http.ResponseWriter, r *http.Request) {
 	// TODO not ready
 	id := chi.URLParam(r, "id")
 
-	resp := map[string]any{
+	err := httputil.JSON(w, http.StatusOK, map[string]any{
 		"token": id,
-		"windows": map[string]any{
-			"5m":  map[string]any{"vol_usd": 123.45, "trades": 10},
-			"1h":  map[string]any{"vol_usd": 2345.67, "trades": 123},
-			"24h": map[string]any{"vol_usd": 34567.89, "trades": 2345},
-		},
+		"w5m":   map[string]any{},
+		"w1h":   map[string]any{},
+		"w24h":  map[string]any{},
+	}, nil)
+	if err != nil {
+		a.dependency.Log.Errorf("TokenStats handler error: %s", err.Error())
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(resp)
+
+	a.dependency.Log.Infof("TokenStats handler success")
 }

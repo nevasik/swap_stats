@@ -5,7 +5,7 @@ import (
 	"dexcelerate/internal/pubsub/nats"
 	"dexcelerate/internal/stores/clickhouse"
 	"dexcelerate/internal/stores/redis"
-	"encoding/json"
+	"dexcelerate/pkg/httputil"
 	"fmt"
 	"net/http"
 	"strings"
@@ -47,36 +47,31 @@ func NewAPI(d *Deps) *API {
 }
 
 func (a *API) Healthz(w http.ResponseWriter, _ *http.Request) {
-	resp := map[string]any{
-		"status": "ok",
-		"data":   map[string]any{},
+	if err := httputil.JSON(w, http.StatusOK, map[string]any{}, nil); err != nil {
+		a.dependency.Log.Errorf("Healthz handler error: %s", err.Error())
 	}
-
-	a.writeResponseJson(w, http.StatusOK, resp)
+	a.dependency.Log.Info("Healthz handler success")
 }
 
 // Check health external services/clients
-func (a *API) Readiness(w http.ResponseWriter, _ *http.Request) {
-	a.dependency.Log.Info("Checking dependencies API")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+func (a *API) Readiness(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 
-	resp := make(map[string]any)
-
 	if err := a.checkDependencies(ctx); err != nil {
-		resp["status"] = "error"
-		resp["data"] = map[string]any{
+		if err = httputil.Error(w, r, http.StatusServiceUnavailable, "dependencies_unhealthy", "dependencies check failed", map[string]any{
 			"error": err.Error(),
+		}); err != nil {
+			a.dependency.Log.Errorf("Readiness handler error: %s", err.Error())
 		}
-	} else {
-		resp["status"] = "ok"
-		resp["data"] = map[string]any{
-			"dependencies": "is healthy",
-		}
+		return
 	}
 
-	a.writeResponseJson(w, http.StatusOK, resp)
+	if err := httputil.JSON(w, http.StatusOK, map[string]string{"dependencies": "healthy"}, nil); err != nil {
+		a.dependency.Log.Errorf("Readiness handler error: %s", err.Error())
+	}
+
+	a.dependency.Log.Info("Readiness handler success")
 }
 
 func (a *API) checkDependencies(ctx context.Context) error {
@@ -136,18 +131,4 @@ func (a *API) checkDependencies(ctx context.Context) error {
 func (a *API) checkClickHouseBatch(_ context.Context) error {
 	// TODO write test select query to clickhouse
 	return nil
-}
-
-func (a *API) writeResponseJson(w http.ResponseWriter, statusCode int, data any) {
-	buf, err := json.Marshal(data)
-
-	if _, err = w.Write(buf); err != nil {
-		http.Error(w, "marshal error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(statusCode)
-
-	a.dependency.Log.Infof("Successfully write response: %v", data)
 }
