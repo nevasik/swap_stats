@@ -20,3 +20,12 @@ tests:
 .PHONY: loadgen
 loadgen:
 	go run ./build-tools/loadgen.go -brokers localhost:9092 -topic raw-swaps -rps 500 -duration 30s
+
+topic ?= raw-swaps
+brokers ?= localhost:9092
+
+create-topic:
+	./infra/kafka/create_topic.sh $(topic) $(brokers)
+
+loadgen:
+	go run ./build-tools/loadgen.go -brokers $(brokers) -topic $(topic) -rps 500 -duration 30s
