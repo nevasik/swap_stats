@@ -153,8 +153,16 @@ type WSConfig struct {
 }
 
 type MetricsConfig struct {
-	Prometheus string `yaml:"prometheus"`
-	PProf      string `yaml:"pprof"`
+	Prometheus string          `yaml:"prometheus"` // ":9091"
+	Pyroscope  PyroscopeConfig `yaml:"pyroscope"`
+}
+
+type PyroscopeConfig struct {
+	Enabled    bool              `yaml:"enabled"`
+	ServerAddr string            `yaml:"server_addr"`
+	AppName    string            `yaml:"app_name"`
+	AuthToken  string            `yaml:"auth_token"`
+	Tags       map[string]string `yaml:"tags"`
 }
 
 func Load(path string) (*Config, error) {

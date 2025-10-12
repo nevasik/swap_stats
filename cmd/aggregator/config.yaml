@@ -100,4 +100,11 @@ api:
 
 metrics:
   prometheus: ":9091" # /metrics
-  pprof: "127.0.0.1:4040"
+  pyroscope:
+    enabled: true
+    server_addr: "http://127.0.0.1:4040"
+    app_name: "swap-stats-1"
+    auth_token: ""
+    tags:
+      env: "dev"
+      instance: "swap-stats-1"

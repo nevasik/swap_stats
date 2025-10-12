@@ -5,19 +5,36 @@ import (
 )
 
 type PProfConfig struct {
-	AppName    string
-	ServerAddr string
+	Enabled       bool   `yaml:"enabled"`
+	AppInstanceID string `yaml:""`
+	AppName       string
+	ServerAddr    string
+	AuthToken     string
+	Tags          map[string]string
 }
 
-func InitPProf(cfg PProfConfig) (*pyroscope.Profiler, error) {
+func InitPProf(cfg *PProfConfig) (*pyroscope.Profiler, error) {
+	if !cfg.Enabled {
+		return nil, nil
+	}
+
+	pTags := map[string]string{
+		"env":      "dev",
+		"instance": cfg.AppInstanceID,
+	}
+	for k, v := range cfg.Tags {
+		pTags[k] = v
+	}
+
 	return pyroscope.Start(pyroscope.Config{
 		ApplicationName: cfg.AppName,
-		ServerAddress:   cfg.ServerAddr, // TODO write address pyroscope
+		ServerAddress:   cfg.ServerAddr,
+		AuthToken:       cfg.AuthToken,
 		Logger:          pyroscope.StandardLogger,
-		Tags:            map[string]string{"hostname": "localhost"},
-
+		Tags:            pTags,
 		ProfileTypes: []pyroscope.ProfileType{
 			pyroscope.ProfileCPU,
+
 			pyroscope.ProfileAllocObjects,
 			pyroscope.ProfileAllocSpace,
 			pyroscope.ProfileInuseObjects,

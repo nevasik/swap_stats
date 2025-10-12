@@ -7,6 +7,7 @@ import (
 	"dexcelerate/internal/api/http/handlers"
 	"dexcelerate/internal/api/http/mw"
 	"dexcelerate/internal/config"
+	"dexcelerate/internal/metrics"
 	"dexcelerate/internal/pubsub/nats"
 	"dexcelerate/internal/security"
 	"dexcelerate/internal/stores/clickhouse"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grafana/pyroscope-go"
 	loggerCfg "gitlab.com/nevasik7/alerting/config"
 	"gitlab.com/nevasik7/alerting/logger"
 )
@@ -36,6 +38,9 @@ type Container struct {
 
 	// servers
 	httpSrv *http.Server
+
+	// metrics
+	profiler *pyroscope.Profiler
 }
 
 func (c *Container) Start() error {
@@ -62,6 +67,20 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		Level:  cfg.Logging.Level,
 		Format: cfg.Logging.Format,
 	})
+
+	// pyroscope
+	profiler, err := metrics.InitPProf(&metrics.PProfConfig{
+		AppInstanceID: cfg.App.InstanceID,
+		AppName:       cfg.Metrics.Pyroscope.AppName,
+		ServerAddr:    cfg.Metrics.Pyroscope.ServerAddr,
+		AuthToken:     cfg.Metrics.Pyroscope.AuthToken,
+		Tags:          cfg.Metrics.Pyroscope.Tags,
+	})
+	if err != nil {
+		lg.Errorf("Pyroscope init failed: %v", err)
+	} else {
+		lg.Infof("Pyroscope connected to %s as %s", cfg.Metrics.Pyroscope.ServerAddr, cfg.Metrics.Pyroscope.AppName)
+	}
 
 	rdb, err := redis.New(ctx, lg, &cfg.Stores.Redis)
 	if err != nil || rdb == nil {
@@ -159,16 +178,23 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 	lg.Info("Successfully initialized app")
 
 	c := &Container{
-		app:     app,
-		redis:   rdb,
-		ch:      ch,
-		nc:      natsCl,
-		httpSrv: httpSrv,
+		app:      app,
+		redis:    rdb,
+		ch:       ch,
+		nc:       natsCl,
+		httpSrv:  httpSrv,
+		profiler: profiler,
 	}
 
 	cleanupF := func() {
 		ctxClean, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
+		if c.profiler != nil {
+			if err = c.profiler.Stop(); err != nil {
+				lg.Errorf("Failed to stop profiler: %v", err)
+			}
+		}
 
 		if err = httpSrv.Shutdown(ctxClean); err != nil {
 			lg.Errorf("Failed to shutdown by cleanupF HTTP server: %v", err)
