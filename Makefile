@@ -16,3 +16,7 @@ lint: .install-linter
 .PHONY: tests
 tests:
 	go test ./...
+
+.PHONY: loadgen
+loadgen:
+	go run ./build-tools/loadgen.go -brokers localhost:9092 -topic raw-swaps -rps 500 -duration 30s

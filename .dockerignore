@@ -5,3 +5,4 @@
 /node_modules
 **/*.local.*
 **/*.log
+/build-tools
