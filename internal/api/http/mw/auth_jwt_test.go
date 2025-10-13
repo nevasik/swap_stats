@@ -44,9 +44,8 @@ func createTestToken(t *testing.T, privateKey *rsa.PrivateKey, sub, aud, iss str
 
 func TestNewJWTMiddleware(t *testing.T) {
 	t.Run("panic_when_verifier_is_nil", func(t *testing.T) {
-		assert.Panics(t, func() {
-			NewJWTMiddleware(nil)
-		})
+		_, err := NewJWTMiddleware(nil)
+		assert.Error(t, err)
 	})
 
 	t.Run("successful_creation", func(t *testing.T) {
@@ -57,7 +56,8 @@ func TestNewJWTMiddleware(t *testing.T) {
 			Iss:    "test-iss",
 		}
 
-		middleware := NewJWTMiddleware(verifier)
+		middleware, err := NewJWTMiddleware(verifier)
+		require.NoError(t, err)
 		assert.NotNil(t, middleware)
 		assert.Equal(t, verifier, middleware.verifier)
 	})
@@ -73,7 +73,8 @@ func TestJWTMiddleware_Handler_Success(t *testing.T) {
 		Leeway: 10 * time.Second,
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	token := createTestToken(t, privKey, "user123", "test-service", "test-issuer", 1*time.Hour)
 
@@ -114,7 +115,8 @@ func TestJWTMiddleware_Handler_MissingToken(t *testing.T) {
 		Iss:    "test-issuer",
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	nextHandlerCalled := false
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -183,7 +185,8 @@ func TestJWTMiddleware_Handler_InvalidToken(t *testing.T) {
 		Iss:    "test-issuer",
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	nextHandlerCalled := false
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +239,8 @@ func TestJWTMiddleware_Handler_ExpiredToken(t *testing.T) {
 		Leeway: 0, // No leeway for this test
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	// create expired token
 	token := createTestToken(t, privKey, "user123", "test-service", "test-issuer", -1*time.Hour)
@@ -267,7 +271,8 @@ func TestJWTMiddleware_Handler_WrongAudience(t *testing.T) {
 		Iss:    "test-issuer",
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	// create token with not valid audience
 	token := createTestToken(t, privKey, "user123", "wrong-audience", "test-issuer", 1*time.Hour)
@@ -298,7 +303,8 @@ func TestJWTMiddleware_Handler_WrongIssuer(t *testing.T) {
 		Iss:    "expected-issuer",
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	// create token with not valid issuer
 	token := createTestToken(t, privKey, "user123", "test-service", "wrong-issuer", 1*time.Hour)
@@ -330,7 +336,8 @@ func TestJWTMiddleware_Handler_WrongSignature(t *testing.T) {
 		Iss:    "test-issuer",
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	token := createTestToken(t, privKey1, "user123", "test-service", "test-issuer", 1*time.Hour)
 
@@ -360,7 +367,8 @@ func TestJWTMiddleware_Handler_ContextPropagation(t *testing.T) {
 		Iss:    "test-issuer",
 	}
 
-	middleware := NewJWTMiddleware(verifier)
+	middleware, err := NewJWTMiddleware(verifier)
+	require.NoError(t, err)
 
 	token := createTestToken(t, privKey, "user-with-special-id", "test-service", "test-issuer", 1*time.Hour)
 

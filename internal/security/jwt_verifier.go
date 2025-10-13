@@ -29,7 +29,7 @@ type RS256Verifier struct {
 // Load pub_key and parsing, audience/issuer can leave empty - not check
 func NewRS256Verifier(cfg *config.JWTConfig) (*RS256Verifier, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("JWT config cannot be nil")
+		return nil, errors.New("JWT config cannot be nil")
 	}
 	b, err := os.ReadFile(cfg.PublicKeyPath)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"dexcelerate/internal/api/http/handlers"
 	"dexcelerate/internal/api/http/mw"
 	"dexcelerate/internal/config"
+	deduper "dexcelerate/internal/dedupe/redis"
 	"dexcelerate/internal/metrics"
 	"dexcelerate/internal/pubsub/nats"
 	"dexcelerate/internal/security"
@@ -29,7 +30,10 @@ type Container struct {
 	redis *redis.Client
 	ch    *clickhouse.Conn
 	nc    *nats.Client
-	// timeseries repo will wrap clickhouse.Writer when add readers
+
+	// deduper
+	// in-memory dedupe
+	rdbDedupe *deduper.RedisDedupe
 
 	// services
 	// consumer, windowEngine, broadcaster etc...
@@ -68,7 +72,6 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		Format: cfg.Logging.Format,
 	})
 
-	// pyroscope
 	profiler, err := metrics.InitPProf(&metrics.PProfConfig{
 		AppInstanceID: cfg.App.InstanceID,
 		AppName:       cfg.Metrics.Pyroscope.AppName,
@@ -77,26 +80,38 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		Tags:          cfg.Metrics.Pyroscope.Tags,
 	})
 	if err != nil {
-		lg.Errorf("Pyroscope init failed: %v", err)
-	} else {
-		lg.Infof("Pyroscope connected to %s as %s", cfg.Metrics.Pyroscope.ServerAddr, cfg.Metrics.Pyroscope.AppName)
+		lg.Panicf("Pyroscope initialize failed: %v", err)
 	}
+	lg.Infof("Pyroscope initialize to %s as %s", cfg.Metrics.Pyroscope.ServerAddr, cfg.Metrics.Pyroscope.AppName)
 
 	rdb, err := redis.New(ctx, lg, &cfg.Stores.Redis)
-	if err != nil || rdb == nil {
+	if err != nil {
 		lg.Panicf("Failed to initialize redis client: %v", err)
 	}
+
+	// deduper
+	// for dev inMemoryDedupe := dedupe.NewInMemoryDedupe(lg, cfg.Dedupe.TTL, cfg.Dedupe.JanitorEvery)
+	bloom, err := deduper.NewBloom(lg, &cfg.Dedupe.Bloom, rdb)
+	if err != nil {
+		lg.Panicf("Failed to initialize bloom: %v", err)
+	}
+	lg.Infof("Bloom initialize by key=%s, cap=%d, errRate=%f", bloom.Key, bloom.Capacity, bloom.ErrRate)
+
+	rdbDedupe, err := deduper.NewRedisDeduper(lg, &cfg.Dedupe, rdb, bloom)
+	if err != nil {
+		lg.Panicf("Failed to initialize redis deduper: %v", err)
+	}
+	lg.Infof("Deduper redis client initialize by prefix %s", cfg.Dedupe.Prefix)
 
 	ch, err := clickhouse.New(ctx, &cfg.Stores.ClickHouse)
 	if err != nil {
 		lg.Panicf("Failed to initialize clickhouse client: %v", err)
 	}
-
 	url := strings.Split(cfg.Stores.ClickHouse.DSN, "?")
 	lg.Infof("Successfully initialized clickhouse client, url=%s", url[0])
 
-	chWriter := clickhouse.NewWriter(lg, ch, &cfg.Stores.ClickHouse)
-	if chWriter == nil {
+	chWriter, err := clickhouse.NewWriter(lg, &cfg.Stores.ClickHouse, ch)
+	if err != nil {
 		lg.Panicf("Failed to initialize clickhouse writer")
 	}
 	lg.Info("Successfully initialized clickhouse writer")
@@ -104,7 +119,6 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 	natsCl, err := nats.New(lg, &cfg.PubSub.NATS)
 	if err != nil || natsCl == nil {
 		lg.Panicf("Failed to initialize nats client: %v", err)
-		return nil, nil, err
 	}
 	lg.Infof("Successfully initialized nats client, url=%s", cfg.PubSub.NATS.URL)
 
@@ -129,7 +143,10 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 
 	var jwtMW *mw.JWTMiddleware
 	if verifier != nil && cfg.Security.JWT.Enabled {
-		jwtMW = mw.NewJWTMiddleware(verifier)
+		jwtMW, err = mw.NewJWTMiddleware(verifier)
+		if err != nil {
+			lg.Panicf("Failed to initialize jwt middleware: %v", err)
+		}
 		lg.Info("Successfully added JWT Middleware")
 	}
 
@@ -178,12 +195,13 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 	lg.Info("Successfully initialized app")
 
 	c := &Container{
-		app:      app,
-		redis:    rdb,
-		ch:       ch,
-		nc:       natsCl,
-		httpSrv:  httpSrv,
-		profiler: profiler,
+		app:       app,
+		redis:     rdb,
+		ch:        ch,
+		nc:        natsCl,
+		rdbDedupe: rdbDedupe,
+		httpSrv:   httpSrv,
+		profiler:  profiler,
 	}
 
 	cleanupF := func() {

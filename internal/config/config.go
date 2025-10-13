@@ -84,7 +84,17 @@ type TLSConfig struct {
 }
 
 type DedupeConfig struct {
-	TTL time.Duration `yaml:"ttl"`
+	Prefix       string        `yaml:"prefix"`
+	TTL          time.Duration `yaml:"ttl"`
+	JanitorEvery time.Duration `yaml:"janitor_every"`
+	Bloom        BloomConfig   `yaml:"bloom"`
+}
+
+type BloomConfig struct {
+	Enabled  bool
+	Key      string
+	Capacity int64
+	ErrRate  float64
 }
 
 type StoresConfig struct {
@@ -97,7 +107,6 @@ type RedisConfig struct {
 	Username     string        `yaml:"username"`
 	Password     string        `yaml:"password"`
 	DB           int           `yaml:"db"`
-	Prefix       string        `yaml:"prefix"`
 	DialTimeout  time.Duration `yaml:"dial_timeout"`
 	ReadTimeout  time.Duration `yaml:"read_timeout"`
 	WriteTimeout time.Duration `yaml:"write_timeout"`

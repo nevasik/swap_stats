@@ -3,6 +3,7 @@ package clickhouse
 import (
 	"context"
 	"dexcelerate/internal/config"
+	"errors"
 	"fmt"
 	"time"
 
@@ -15,7 +16,7 @@ type Conn struct {
 
 func New(ctx context.Context, cfg *config.ClickHouseConfig) (*Conn, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("clickhouse config cannot be nil")
+		return nil, errors.New("clickhouse config cannot be nil")
 	}
 	opts, err := ch.ParseDSN(cfg.DSN)
 	if err != nil {

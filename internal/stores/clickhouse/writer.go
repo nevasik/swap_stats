@@ -37,15 +37,15 @@ type Writer struct {
 	wg        sync.WaitGroup
 }
 
-func NewWriter(log logger.Logger, conn *Conn, cfg *config.ClickHouseConfig) *Writer {
+func NewWriter(log logger.Logger, cfg *config.ClickHouseConfig, conn *Conn) (*Writer, error) {
 	if log == nil {
-		panic("logger cannot be nil")
-	}
-	if conn == nil {
-		panic("clickhouse writer connection cannot be nil")
+		return nil, errors.New("logger cannot be nil")
 	}
 	if cfg == nil {
-		panic("clickhouse writer config cannot be nil")
+		return nil, errors.New("clickhouse config cannot be nil")
+	}
+	if conn == nil {
+		return nil, errors.New("clickhouse client cannot be nil")
 	}
 
 	// sane defaults
@@ -73,7 +73,7 @@ func NewWriter(log logger.Logger, conn *Conn, cfg *config.ClickHouseConfig) *Wri
 	w.wg.Add(1)
 	go w.loop()
 
-	return w
+	return w, nil
 }
 
 func (w *Writer) Enqueue(row *RawSwapRow) error {

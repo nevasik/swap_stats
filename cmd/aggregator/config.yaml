@@ -52,7 +52,14 @@ ingest:
     key_file: "/etc/ssl/app.key"
 
 dedupe:
+  prefix: "dedupe:"
   ttl: "24h" # время жизни ключа(event_id) при dedupe(дубликаты)
+  janitor_every: "1h" # время через которое ключ очищается из key-value хранилища
+  bloom:
+    enabled: true
+    key: "swapstats:bf:events"
+    capacity: 2000000 # prod решене при 1000 EPS нужно делать ~ 120 000 000
+    error_rate: 0.001 # 1% допустимой ложной проверки
 
 stores:
   redis: # неймспейс для ключей (swapstats:*)
@@ -60,7 +67,6 @@ stores:
     username: "default"
     password: 5JKksp3HVfAe
     db: 2
-    prefix: "swapstats:"
     # жёсткие лимиты, чтобы не залипать на сети
     dial_timeout: "1s"
     read_timeout: "2s"
