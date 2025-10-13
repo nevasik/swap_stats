@@ -1,6 +1,6 @@
 ### Имитирует "производителя", начнет шить JSON-события в raw-swaps, с ключом event_id = chain:tx:logIndex - под консьюмера/дедуп/ClickHouse схему.
 
-### как запустить
+### Как запустить
 ```bash
  go run ./build-tools/loadgen.go \
 -brokers localhost:9092 \

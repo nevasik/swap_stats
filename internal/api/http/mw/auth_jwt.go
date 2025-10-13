@@ -3,6 +3,7 @@ package mw
 import (
 	"context"
 	"dexcelerate/internal/security"
+	"errors"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,11 +16,11 @@ type JWTMiddleware struct {
 	verifier *security.RS256Verifier // may be nil if JWT.enabled=false
 }
 
-func NewJWTMiddleware(v *security.RS256Verifier) *JWTMiddleware {
+func NewJWTMiddleware(v *security.RS256Verifier) (*JWTMiddleware, error) {
 	if v == nil {
-		panic("JWT verifier cannot be nil")
+		return nil, errors.New("JWT verifier cannot be nil")
 	}
-	return &JWTMiddleware{verifier: v}
+	return &JWTMiddleware{verifier: v}, nil
 }
 
 func (m *JWTMiddleware) Handler(next http.Handler) http.Handler {

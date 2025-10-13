@@ -4,13 +4,16 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"gitlab.com/nevasik7/alerting/logger"
 )
 
 type memEntry struct {
 	expireAt int64 // unix nano
 }
 
-type Memory struct {
+type MemoryDedupe struct {
+	log     logger.Logger
 	ttl     time.Duration
 	mu      sync.RWMutex
 	items   map[string]memEntry
@@ -21,8 +24,9 @@ type Memory struct {
 // for dev(one instance);
 // ttl-how long to store see id;
 // janitorEvery-how long clear expired key; 0-> don't run collector
-func NewMemory(ttl, janitorEvery time.Duration) *Memory {
-	m := &Memory{
+func NewInMemoryDedupe(log logger.Logger, ttl, janitorEvery time.Duration) *MemoryDedupe {
+	m := &MemoryDedupe{
+		log:    log,
 		ttl:    ttl,
 		items:  make(map[string]memEntry, 1024),
 		stopCh: make(chan struct{}),
@@ -35,7 +39,7 @@ func NewMemory(ttl, janitorEvery time.Duration) *Memory {
 	return m
 }
 
-func (m *Memory) Seen(_ context.Context, id string) (bool, error) {
+func (m *MemoryDedupe) Seen(_ context.Context, id string) (bool, error) {
 	now := time.Now().UnixNano()
 	exp := now + m.ttl.Nanoseconds()
 
@@ -51,10 +55,13 @@ func (m *Memory) Seen(_ context.Context, id string) (bool, error) {
 	m.items[id] = memEntry{
 		expireAt: exp,
 	}
+
+	m.log.Debugf("Write to items by key=%s", id)
+
 	return false, nil
 }
 
-func (m *Memory) janitor(every time.Duration) {
+func (m *MemoryDedupe) janitor(every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
 
@@ -67,6 +74,7 @@ func (m *Memory) janitor(every time.Duration) {
 			m.mu.Lock()
 			for k, e := range m.items {
 				if e.expireAt <= now {
+					m.log.Debugf("Removing expired item: %s", k)
 					delete(m.items, k)
 				}
 			}
@@ -76,7 +84,7 @@ func (m *Memory) janitor(every time.Duration) {
 }
 
 // Close garbage collector(if running)
-func (m *Memory) Close() {
+func (m *MemoryDedupe) Close() {
 	m.mu.Lock()
 	if !m.stopped {
 		close(m.stopCh)
