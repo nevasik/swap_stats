@@ -13,7 +13,6 @@ import (
 	"dexcelerate/internal/security"
 	"dexcelerate/internal/stores/clickhouse"
 	"dexcelerate/internal/stores/redis"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -66,7 +65,7 @@ func (c *Container) Stop() error {
 }
 
 // Construct image app
-func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) {
+func Build(ctx context.Context, cfg *config.Config) (*Container, func()) {
 	lg := logger.New(loggerCfg.LoggerCfg{
 		Level:  cfg.Logging.Level,
 		Format: cfg.Logging.Format,
@@ -108,34 +107,33 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		lg.Panicf("Failed to initialize clickhouse client: %v", err)
 	}
 	url := strings.Split(cfg.Stores.ClickHouse.DSN, "?")
-	lg.Infof("Successfully initialized clickhouse client, url=%s", url[0])
+	lg.Infof("Successfully initialize clickhouse client, url=%s", url[0])
 
 	chWriter, err := clickhouse.NewWriter(lg, &cfg.Stores.ClickHouse, ch)
 	if err != nil {
 		lg.Panicf("Failed to initialize clickhouse writer")
 	}
-	lg.Info("Successfully initialized clickhouse writer")
+	lg.Info("Successfully initialize clickhouse writer")
 
 	natsCl, err := nats.New(lg, &cfg.PubSub.NATS)
 	if err != nil || natsCl == nil {
 		lg.Panicf("Failed to initialize nats client: %v", err)
 	}
-	lg.Infof("Successfully initialized nats client, url=%s", cfg.PubSub.NATS.URL)
+	lg.Infof("Successfully initialize nats client, url=%s", cfg.PubSub.NATS.URL)
 
 	var verifier *security.RS256Verifier
 	var signer *security.RS256Signer
 	if cfg.Security.JWT.Enabled {
 		cfgJWT := &cfg.Security.JWT
 		if verifier, err = security.NewRS256Verifier(cfgJWT); err != nil || verifier == nil { //
-			lg.Errorf("Failed to initialize verifier: %v", err)
-			return nil, nil, err
+			lg.Panicf("Failed to initialize verifier: %v", err)
 		}
 		if signer, err = security.NewRS256Signer(cfgJWT); err != nil || signer == nil {
 			lg.Errorf("Failed to initialize signer: %v", err)
 			// signer is not required for us -> continue
 		}
 	}
-	lg.Info("Successfully initialized JWT-Verifier")
+	lg.Info("Successfully initialize JWT-Verifier")
 
 	gzipMW := mw.NewGzip(gzip.NoCompression)
 	logMW := mw.NewLogging(lg)
@@ -143,8 +141,7 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 
 	var jwtMW *mw.JWTMiddleware
 	if verifier != nil && cfg.Security.JWT.Enabled {
-		jwtMW, err = mw.NewJWTMiddleware(verifier)
-		if err != nil {
+		if jwtMW, err = mw.NewJWTMiddleware(verifier); err != nil {
 			lg.Panicf("Failed to initialize jwt middleware: %v", err)
 		}
 		lg.Info("Successfully added JWT Middleware")
@@ -166,9 +163,9 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		Signer:          signer, // maybe nil if jwt.enabled=false
 	})
 	if api == nil {
-		return nil, nil, errors.New("api struct from NewAPI is nil")
+		lg.Panicf("Failed to initialize API handler is nil")
 	}
-	lg.Info("Successfully initialized API")
+	lg.Info("Successfully initialize API")
 
 	// http server
 	httpSrv := http.NewServer(http.ServerDeps{
@@ -184,15 +181,15 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		IdleTimeout:  cfg.API.HTTP.IdleTimeout,
 	})
 	if httpSrv == nil {
-		return nil, nil, errors.New("http server is nil")
+		lg.Panicf("Failed to initialize HTTP server is nil")
 	}
-	lg.Info("Successfully initialized HTTP server")
+	lg.Info("Successfully initialize HTTP server")
 
 	app := New(lg, httpSrv)
 	if app == nil {
-		return nil, nil, errors.New("init app is failed, app struct is nil")
+		lg.Panicf("Failed to initialize app is nil")
 	}
-	lg.Info("Successfully initialized app")
+	lg.Info("Successfully initialize app")
 
 	c := &Container{
 		app:       app,
@@ -233,6 +230,6 @@ func Build(ctx context.Context, cfg *config.Config) (*Container, func(), error) 
 		lg.Info("Successfully cleaned up dependency")
 	}
 
-	lg.Info("Wiring successfully initialized")
-	return c, cleanupF, nil
+	lg.Info("Wiring successfully initialize")
+	return c, cleanupF
 }

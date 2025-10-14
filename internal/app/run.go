@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"dexcelerate/internal/config"
-	"fmt"
+	"errors"
 	"os/signal"
 	"syscall"
 	"time"
@@ -14,17 +14,14 @@ func Run(cfg *config.Config) error {
 	ctxBuild, cancelBuild := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelBuild()
 
-	container, cleanup, err := Build(ctxBuild, cfg)
-	if err != nil {
-		return err
-	}
+	container, cleanup := Build(ctxBuild, cfg)
 
 	if cleanup == nil {
-		return fmt.Errorf("cleanup is nil")
+		return errors.New("cleanup is nil")
 	}
 	defer cleanup()
 
-	if err = container.Start(); err != nil {
+	if err := container.Start(); err != nil {
 		return err
 	}
 
