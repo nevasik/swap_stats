@@ -2,3 +2,4 @@
 infra/secrets/jwtRS256.key
 infra/secrets/jwtRS256.key.pub
 CLAUDE.md
+internal/window/README.md
