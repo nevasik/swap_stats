@@ -2,7 +2,6 @@
 
 app:
   instance_id: "swap-stats-1"        # ID инстанса
-  grace: "120s"                      # допускаем опоздание событий
   snapshot_interval: "5s"            # период снапшотов состояния
   shutdown_timeout: "10s"
 
@@ -50,6 +49,11 @@ ingest:
     ca_file: "/etc/ssl/ca.pem"
     cert_file: "/etc/ssl/app.crt"
     key_file: "/etc/ssl/app.key"
+
+window:
+  grace: "120s"
+  buckets_per_day: 1440
+  coerce_to_utc: true
 
 dedupe:
   prefix: "dedupe:"

@@ -29,8 +29,8 @@ type Deps struct {
 	Signer *security.RS256Signer // JWT token signer (only for dev/testing)
 	// ---- security ----
 
-	// ---- internal service ----
-	//Windows *window.Engine // hot window 5m/1h/24h for HTTP and WS
+	//---- internal service ----
+	//Windows window.WindowEngine // hot window 5m/1h/24h for HTTP and WS
 	//Dedupe dedupe.Deduper // redis SetNX
 	//Snapshot snapshot.Store // snapshot window
 	//Offset store.Offset // offset consumer

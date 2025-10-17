@@ -4,6 +4,7 @@ import (
 	"context"
 	"dexcelerate/internal/config"
 	rdb "dexcelerate/internal/stores/redis"
+	"errors"
 	"fmt"
 	"time"
 
@@ -24,10 +25,10 @@ type RedisDedupe struct {
 // prefix example "swapstats:dedupe:"
 func NewRedisDeduper(log logger.Logger, cfg *config.DedupeConfig, rdb *rdb.Client, bloom *Bloom) (*RedisDedupe, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("config is required to the redis deduper")
+		return nil, errors.New("config is required to the redis deduper")
 	}
 	if rdb == nil {
-		return nil, fmt.Errorf("redis client is required to the redis deduper")
+		return nil, errors.New("redis client is required to the redis deduper")
 	}
 
 	prefix := cfg.Prefix
