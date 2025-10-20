@@ -11,9 +11,9 @@
 
 Для тестирования API доступна готовая Postman коллекция с автоматической передачей JWT токенов:
 
-- **[Dexcelerate_API.postman_collection.json](./Dexcelerate_API.postman_collection.json)** - Полная коллекция всех endpoints
-- **[Dexcelerate_Local.postman_environment.json](./Dexcelerate_Local.postman_environment.json)** - Окружение для локальной разработки
-- **[Dexcelerate_Staging.postman_environment.json](./Dexcelerate_Staging.postman_environment.json)** - Окружение для staging
+- **[Dexcelerate_API.postman_collection.json](../postman/Dexcelerate_API.postman_collection.json)** - Полная коллекция всех endpoints
+- **[Dexcelerate_Local.postman_environment.json](../postman/Dexcelerate_Local.postman_environment.json)** - Окружение для локальной разработки
+- **[Dexcelerate_Staging.postman_environment.json](../postman/Dexcelerate_Staging.postman_environment.json)** - Окружение для staging
 - **[POSTMAN_GUIDE.md](./POSTMAN_GUIDE.md)** - Подробное руководство по использованию
 
 ### Быстрый старт с Postman:
