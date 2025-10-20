@@ -336,8 +336,8 @@ pm.test('Response is valid JSON', function () {
 
 ## Дополнительные ресурсы
 
-- [Документация API](./API.md)
-- [CLAUDE.md](../CLAUDE.md) - Подробная архитектура проекта
+- [Документация API](docs/API.md)
+- [CLAUDE.md](CLAUDE.md) - Подробная архитектура проекта
 - [Postman Learning Center](https://learning.postman.com/)
 
 ## Обратная связь
