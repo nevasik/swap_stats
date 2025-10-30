@@ -10,7 +10,7 @@ import (
 )
 
 func BuildRouter(
-	api *handlers.API,
+	api *handlers.Handler,
 	logMW *mw.LoggingMiddleware,
 	gzipMW *mw.GzipMiddleware,
 	rateLimitMW *mw.RateLimitMiddleware,

@@ -4,19 +4,19 @@ import "time"
 
 // Raw swap event from the stream
 type SwapEvent struct {
-	ChainID      uint32    `json:"chain_id"`
-	TxHash       string    `json:"tx_hash"` // 0x-prefixed 66 chars
-	LogIndex     uint32    `json:"log_index"`
-	EventID      string    `json:"event_id"`      // chain:tx_hash:logIndex(canon)
-	TokenAddress string    `json:"token_address"` // 0x-prefixed 43 chars
+	ChainID      uint32    `json:"chain_id"`      // unique id blockchain network(example 1=eth)
+	TxHash       string    `json:"tx_hash"`       // 0x-prefixed 66 chars
+	LogIndex     uint32    `json:"log_index"`     // log serial number in tx
+	EventID      string    `json:"event_id"`      // {chainID}:{txHash}:{logIndex}
+	TokenAddress string    `json:"token_address"` // 0x-prefixed 43 chars, example eth address
 	TokenSymbol  string    `json:"token_symbol"`  // lowCardinality in CH
-	PoolAddress  string    `json:"pool_address"`  // 0x-prefixed 42 chars
-	Side         Side      `json:"side"`          // buy|sell
-	AmountToken  string    `json:"amount_token"`  // decimal(38,18) as string
-	AmountUSD    string    `json:"amount_usd"`    // decimal(20,6) as string
-	EventTime    time.Time `json:"event_time"`    // RFC3339/UTC
-	BlockNumber  uint64    `json:"block_number"`
-	Removed      bool      `json:"removed"` // reorg compensation flag
+	PoolAddress  string    `json:"pool_address"`  // address pool liquidity, 0x-prefixed 42 chars
+	Side         Side      `json:"side"`          // buy or sell
+	AmountToken  string    `json:"amount_token"`  // count tokens in swap, decimal(38,18) as string
+	AmountUSD    string    `json:"amount_usd"`    // swap equivalent in USD, decimal(20,6) as string
+	EventTime    time.Time `json:"event_time"`    // timestamp block from swap, RFC3339/UTC
+	BlockNumber  uint64    `json:"block_number"`  // number block in the on tx
+	Removed      bool      `json:"removed"`       // reorg compensation flag
 	SchemaVer    uint16    `json:"schema_version"`
 }
 

@@ -6,8 +6,6 @@ import (
 	rdb "dexcelerate/internal/stores/redis"
 	"errors"
 	"fmt"
-
-	"gitlab.com/nevasik7/alerting/logger"
 )
 
 /*
@@ -18,14 +16,13 @@ It reduces Redis QPS when dealing with a large influx of duplicates:
 */
 
 type Bloom struct {
-	//logger   logger.Logger
 	rdb      *rdb.Client
 	Key      string
 	Capacity int64
 	ErrRate  float64
 }
 
-func NewBloom(log logger.Logger, cfg *config.BloomConfig, rdb *rdb.Client) (*Bloom, error) {
+func NewBloom(cfg *config.BloomConfig, rdb *rdb.Client) (*Bloom, error) {
 	if cfg == nil {
 		return nil, errors.New("bloom config is required to the bloom")
 	}

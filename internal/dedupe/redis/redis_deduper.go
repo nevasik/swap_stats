@@ -11,6 +11,12 @@ import (
 	"gitlab.com/nevasik7/alerting/logger"
 )
 
+type Deduplicator interface {
+	IsDuplicate(ctx context.Context, eventID string) (bool, error)
+	MarkSeen(ctx context.Context, eventID string) error
+	Health(ctx context.Context) error
+}
+
 var Deduper = (*RedisDedupe)(nil)
 
 type RedisDedupe struct {
@@ -36,6 +42,13 @@ func NewRedisDeduper(log logger.Logger, cfg *config.DedupeConfig, rdb *rdb.Clien
 		prefix = "dedupe:"
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		return nil, err
+	}
+
 	return &RedisDedupe{
 		log:    log,
 		rdb:    rdb,
@@ -45,28 +58,39 @@ func NewRedisDeduper(log logger.Logger, cfg *config.DedupeConfig, rdb *rdb.Clien
 	}, nil
 }
 
-func (d *RedisDedupe) Seen(ctx context.Context, id string) (bool, error) {
+func (d *RedisDedupe) MarkSeen(ctx context.Context, eventID string) error {
 	// if exists bloom and asked "see" -> duplicate(economy SETNX)
 	if d.bloom != nil {
-		if exists, err := d.bloom.Exists(ctx, id); err == nil && exists {
-			return true, nil
+		if exists, err := d.bloom.Exists(ctx, eventID); err == nil && exists {
+			return nil
 		}
 		// if bloom said "not see" -> continue(SETNX)
 	}
 
-	key := d.prefix + id
+	key := d.prefix + eventID
 	ok, err := d.rdb.SetNX(ctx, key, 1, d.ttl).Result()
 	if err != nil {
 		d.log.Errorf("Redis SetNX error=%v", err)
-		return false, fmt.Errorf("redis SetNX error=%v", err)
+		return fmt.Errorf("redis SetNX error=%v", err)
 	}
 
 	seen := !ok                  // ok=true -> new ID("not see"); ok=false -> "see"
 	if !seen && d.bloom != nil { // if success new item and bloom not nil - add there
-		if _, err = d.bloom.Add(ctx, id); err != nil {
-			d.log.Errorf("Failed to add bloom id %s, err=%v", id, err)
+		if _, err = d.bloom.Add(ctx, eventID); err != nil {
+			d.log.Errorf("Failed to add bloom id %s, err=%v", eventID, err)
 		}
 	}
 
-	return seen, nil
+	return nil
+}
+
+func (d *RedisDedupe) IsDuplicate(ctx context.Context, eventID string) (bool, error) {
+	return false, nil
+}
+
+func (d *RedisDedupe) Health(ctx context.Context) error {
+	if err := d.rdb.Ping(ctx).Err(); err != nil {
+		d.log.Errorf("Redis connection error: %v", err)
+	}
+	return nil
 }

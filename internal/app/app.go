@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
 
 	"gitlab.com/nevasik7/alerting/logger"
 )
@@ -18,7 +19,7 @@ type App struct {
 	httpSrv HTTPServer
 }
 
-func New(log logger.Logger, httpSrv HTTPServer) *App {
+func NewApp(log logger.Logger, httpSrv HTTPServer) *App {
 	if log == nil {
 		panic("logger cannot be nil")
 	}
@@ -46,6 +47,22 @@ func (a *App) Start() error {
 
 func (a *App) Shutdown(ctx context.Context) error {
 	a.log.Debug("App stopped begin...")
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// TODO: доделать текущие доработки со снапшотом при закрытии приложения
+	// Создаем финальный snapshot перед остановкой
+	//snapshot, err := app.windowEngine.Snapshot(ctx)
+	//if err != nil {
+	// Timeout — не успели сохранить snapshot
+	//return fmt.Errorf("snapshot failed: %w", err)
+	//}
+
+	// Сохраняем в Redis с тем же context
+	//if err := app.redis.Set(ctx, "snapshot:final", snapshot).Err(); err != nil {
+	//	return err
+	//}
 
 	if err := a.httpSrv.Shutdown(ctx); err != nil {
 		return err

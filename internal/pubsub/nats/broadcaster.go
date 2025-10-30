@@ -1,6 +1,7 @@
 package nats
 
 import (
+	"context"
 	"dexcelerate/internal/config"
 	"errors"
 	"fmt"
@@ -46,18 +47,15 @@ func New(log logger.Logger, cfg *config.NATSConfig) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) Ready() bool {
-	if c.nc == nil {
-		return false
-	}
-	return c.nc.Status() == nats.CONNECTED
+func (c *Client) Publish(ctx context.Context, subject string, data interface{}) error {
+	return nil
 }
 
-func (c *Client) Status() nats.Status {
-	if c.nc == nil {
-		return nats.DISCONNECTED
+func (c *Client) Health(ctx context.Context) error {
+	if ifReady := c.Ready(); ifReady {
+		return nil
 	}
-	return c.nc.Status()
+	return errors.New("NATS connection not ready")
 }
 
 func (c *Client) Close() error {
@@ -79,4 +77,18 @@ func (c *Client) Close() error {
 	c.nc.Close()
 	c.log.Infof("NATS connection closed gracefully")
 	return nil
+}
+
+func (c *Client) Ready() bool {
+	if c.nc == nil {
+		return false
+	}
+	return c.nc.Status() == nats.CONNECTED
+}
+
+func (c *Client) Status() nats.Status {
+	if c.nc == nil {
+		return nats.DISCONNECTED
+	}
+	return c.nc.Status()
 }

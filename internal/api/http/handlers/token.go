@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
+func (a *Handler) Overview(w http.ResponseWriter, r *http.Request) {
 	// TODO not ready
 	resp := map[string]any{
 		"top_tokens": []any{},
@@ -21,7 +21,7 @@ func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 	a.dependency.Log.Infof("Overview tokens handler success")
 }
 
-func (a *API) TokenStats(w http.ResponseWriter, r *http.Request) {
+func (a *Handler) TokenStats(w http.ResponseWriter, r *http.Request) {
 	// TODO not ready
 	id := chi.URLParam(r, "id")
 
@@ -39,7 +39,7 @@ func (a *API) TokenStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // Generate JWT токен for test/dev
-func (a *API) MintToken(w http.ResponseWriter, r *http.Request) {
+func (a *Handler) MintToken(w http.ResponseWriter, r *http.Request) {
 	// check signer
 	if a.dependency.Signer == nil {
 		err := httputil.Error(w, r, http.StatusServiceUnavailable, "signer_not_available", "JWT signer is not configured", nil)

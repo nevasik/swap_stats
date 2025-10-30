@@ -14,6 +14,7 @@ type Config struct {
 	Security  SecurityConfig  `yaml:"security"`
 	RateLimit RateLimitConfig `yaml:"rate_limit"`
 	Ingest    IngestConfig    `yaml:"ingest"`
+	Window    WindowConfig    `yaml:"window"`
 	Dedupe    DedupeConfig    `yaml:"dedupe"`
 	Stores    StoresConfig    `yaml:"stores"`
 	PubSub    PubSubConfig    `yaml:"pubsub"`
@@ -22,10 +23,9 @@ type Config struct {
 }
 
 type AppConfig struct {
-	InstanceID       string        `yaml:"instance_id"`
-	Grace            time.Duration `yaml:"grace"`
-	SnapshotInterval time.Duration `yaml:"snapshot_interval"`
-	ShutdownTimeout  time.Duration `yaml:"shutdown_timeout"`
+	InstanceID string `yaml:"instance_id"`
+	//SnapshotInterval time.Duration `yaml:"snapshot_interval"`
+	//ShutdownTimeout  time.Duration `yaml:"shutdown_timeout"`
 }
 
 type LoggingConfig struct {
@@ -74,6 +74,12 @@ type IngestConfig struct {
 	SessionTimeout   time.Duration `yaml:"session_timeout"`
 	RebalanceTimeout time.Duration `yaml:"rebalance_timeout"`
 	TLS              TLSConfig     `yaml:"tls"`
+}
+
+type WindowConfig struct {
+	Grace         time.Duration `yaml:"grace"`
+	BucketsPerDay int           `yaml:"buckets_per_day"`
+	CoerceToUTC   bool          `yaml:"coerce_to_utc"`
 }
 
 type TLSConfig struct {

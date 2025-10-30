@@ -55,6 +55,7 @@ func JSON(w http.ResponseWriter, status int, body any, headers map[string]string
 
 func Error(w http.ResponseWriter, r *http.Request, status int, code, message string, details any) error {
 	traceID := middleware.GetReqID(r.Context())
+
 	return JSON(w, status, APIError{
 		Code:    code,
 		Message: message,

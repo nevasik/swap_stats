@@ -43,10 +43,9 @@ func TestNewBloom_Success(t *testing.T) {
 	_, rdb := setupTestRedisForBloom(t)
 	defer rdb.Close()
 
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:bloom:key", 100000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, rdb)
+	bloom, err := NewBloom(cfg, rdb)
 
 	require.NoError(t, err)
 	assert.NotNil(t, bloom)
@@ -60,9 +59,7 @@ func TestNewBloom_NilConfig(t *testing.T) {
 	_, rdb := setupTestRedisForBloom(t)
 	defer rdb.Close()
 
-	log := createTestLogger()
-
-	bloom, err := NewBloom(log, nil, rdb)
+	bloom, err := NewBloom(nil, rdb)
 
 	assert.Error(t, err)
 	assert.Nil(t, bloom)
@@ -70,10 +67,9 @@ func TestNewBloom_NilConfig(t *testing.T) {
 }
 
 func TestNewBloom_NilRedis(t *testing.T) {
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:key", 100000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, nil)
+	bloom, err := NewBloom(cfg, nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, bloom)
@@ -83,8 +79,6 @@ func TestNewBloom_NilRedis(t *testing.T) {
 func TestNewBloom_DefaultValues(t *testing.T) {
 	_, rdb := setupTestRedisForBloom(t)
 	defer rdb.Close()
-
-	log := createTestLogger()
 
 	testCases := []struct {
 		name             string
@@ -155,7 +149,7 @@ func TestNewBloom_DefaultValues(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := createTestBloomConfig(tc.inputKey, tc.inputCapacity, tc.inputErrRate)
 
-			bloom, err := NewBloom(log, cfg, rdb)
+			bloom, err := NewBloom(cfg, rdb)
 
 			require.NoError(t, err)
 			assert.Equal(t, tc.expectedKey, bloom.Key)
@@ -172,10 +166,9 @@ func TestBloom_Ensure_CreatesFilterWhenNotExists(t *testing.T) {
 	defer mr.Close()
 	defer rdb.Close()
 
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:bloom:ensure", 10000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, rdb)
+	bloom, err := NewBloom(cfg, rdb)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -196,10 +189,9 @@ func TestBloom_Ensure_IdempotentWhenFilterExists(t *testing.T) {
 	defer mr.Close()
 	defer rdb.Close()
 
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:bloom:exists", 10000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, rdb)
+	bloom, err := NewBloom(cfg, rdb)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -220,10 +212,9 @@ func TestBloom_Add(t *testing.T) {
 	defer mr.Close()
 	defer rdb.Close()
 
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:bloom:add", 10000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, rdb)
+	bloom, err := NewBloom(cfg, rdb)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -243,10 +234,9 @@ func TestBloom_Exists(t *testing.T) {
 	defer mr.Close()
 	defer rdb.Close()
 
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:bloom:exists", 10000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, rdb)
+	bloom, err := NewBloom(cfg, rdb)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -264,8 +254,6 @@ func TestBloom_Exists(t *testing.T) {
 func TestBloom_GetKey(t *testing.T) {
 	_, rdb := setupTestRedisForBloom(t)
 	defer rdb.Close()
-
-	log := createTestLogger()
 
 	testCases := []struct {
 		name        string
@@ -287,7 +275,7 @@ func TestBloom_GetKey(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := createTestBloomConfig(tc.key, 10000, 0.01)
-			bloom, err := NewBloom(log, cfg, rdb)
+			bloom, err := NewBloom(cfg, rdb)
 			require.NoError(t, err)
 
 			key := bloom.GetKey()

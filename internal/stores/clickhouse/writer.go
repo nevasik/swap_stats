@@ -3,6 +3,7 @@ package clickhouse
 import (
 	"context"
 	"dexcelerate/internal/config"
+	"dexcelerate/internal/domain"
 	"errors"
 	"sync"
 	"time"
@@ -10,28 +11,16 @@ import (
 	"gitlab.com/nevasik7/alerting/logger"
 )
 
-type RawSwapRow struct {
-	EventTime     time.Time
-	ChainID       uint32
-	TxHash        string
-	LogIndex      uint32
-	EventID       string
-	TokenAddress  string
-	TokenSymbol   string
-	PoolAddress   string
-	Side          string
-	AmountToken   string // Decimal(38,18) — send string
-	AmountUSD     string // Decimal(20,6)  — send string
-	BlockNumber   uint64
-	Removed       bool // convert to UInt8
-	SchemaVersion uint16
+type ClickHouseWriter interface {
+	Write(ctx context.Context, row *domain.SwapEvent) error
+	Health(ctx context.Context) error
 }
 
 type Writer struct {
 	Log       logger.Logger
 	Conn      *Conn
 	cfg       *config.ClickHouseConfig
-	inCh      chan RawSwapRow
+	inCh      chan domain.SwapEvent
 	closedCh  chan struct{}
 	closeOnce sync.Once
 	wg        sync.WaitGroup
@@ -66,7 +55,7 @@ func NewWriter(log logger.Logger, cfg *config.ClickHouseConfig, conn *Conn) (*Wr
 		Log:      log,
 		Conn:     conn,
 		cfg:      cfg,
-		inCh:     make(chan RawSwapRow, 8192), // ring buffer = expected EPS peak * time_to_level off
+		inCh:     make(chan domain.SwapEvent, 8192), // ring buffer = expected EPS peak * time_to_level off
 		closedCh: make(chan struct{}),
 	}
 
@@ -76,7 +65,8 @@ func NewWriter(log logger.Logger, cfg *config.ClickHouseConfig, conn *Conn) (*Wr
 	return w, nil
 }
 
-func (w *Writer) Enqueue(row *RawSwapRow) error {
+// TODO: use context
+func (w *Writer) Write(ctx context.Context, row *domain.SwapEvent) error {
 	if row == nil {
 		return errors.New("row cannot be nil")
 	}
@@ -95,30 +85,10 @@ func (w *Writer) Enqueue(row *RawSwapRow) error {
 	}
 }
 
-func (w *Writer) Close(ctx context.Context) error {
-	w.closeOnce.Do(func() {
-		close(w.closedCh)
-		close(w.inCh)
-	})
-
-	done := make(chan struct{})
-	go func() {
-		w.wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
 func (w *Writer) loop() {
 	defer w.wg.Done()
 
-	batch := make([]RawSwapRow, 0, w.cfg.Writer.BatchMaxRows)
+	batch := make([]*domain.SwapEvent, 0, w.cfg.Writer.BatchMaxRows)
 	ticker := time.NewTicker(w.cfg.Writer.BatchMaxInterval)
 	defer ticker.Stop()
 
@@ -150,7 +120,7 @@ func (w *Writer) loop() {
 				return
 			}
 
-			batch = append(batch, row)
+			batch = append(batch, &row)
 			if len(batch) >= w.cfg.Writer.BatchMaxRows {
 				flush()
 			}
@@ -163,7 +133,7 @@ func (w *Writer) loop() {
 	}
 }
 
-func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
+func (w *Writer) insertBatch(ctx context.Context, rows []*domain.SwapEvent) error {
 	if len(rows) == 0 {
 		return nil
 	}
@@ -198,7 +168,7 @@ func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
 		}
 
 		for i := range rows {
-			r := &rows[i]
+			r := rows[i]
 			var removed uint8
 			if r.Removed {
 				removed = 1
@@ -218,7 +188,7 @@ func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
 				r.AmountUSD,
 				r.BlockNumber,
 				removed,
-				r.SchemaVersion,
+				r.SchemaVer,
 			); err != nil {
 				lastErr = err
 				_ = batch.Abort()
@@ -242,4 +212,33 @@ func (w *Writer) insertBatch(ctx context.Context, rows []RawSwapRow) error {
 	}
 
 	return lastErr
+}
+
+func (w *Writer) Health(ctx context.Context) error {
+	if err := w.Conn.Native.Ping(ctx); err != nil {
+		w.Log.Errorf("Failed to ping clickhouse, error=%v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (w *Writer) Close(ctx context.Context) error {
+	w.closeOnce.Do(func() {
+		close(w.closedCh)
+		close(w.inCh)
+	})
+
+	done := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

@@ -14,7 +14,6 @@ import (
 )
 
 // ========== Test Helpers ==========
-
 func setupTestRedisForDeduper(t *testing.T) (*miniredis.Miniredis, *rdb.Client) {
 	t.Helper()
 
@@ -39,10 +38,9 @@ func createTestDedupeConfig(prefix string, ttl time.Duration) *config.DedupeConf
 func createMockBloom(t *testing.T, mr *miniredis.Miniredis, rdb *rdb.Client) *Bloom {
 	t.Helper()
 
-	log := createTestLogger()
 	cfg := createTestBloomConfig("test:bloom:dedupe", 10000, 0.01)
 
-	bloom, err := NewBloom(log, cfg, rdb)
+	bloom, err := NewBloom(cfg, rdb)
 	require.NoError(t, err)
 
 	return bloom
